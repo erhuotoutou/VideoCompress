@@ -99,44 +99,61 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
   res.json({ id, filename: req.file.originalname, size: req.file.size });
 });
 
-// Get available encoders
+// Get available encoders with descriptive labels
+const ENCODER_LABELS = {
+  // H.264 software
+  libx264:       'H.264 软件编码 — 最通用，所有设备可用',
+  libopenh264:   'H.264 OpenH264 — 开源软件编码，通用',
+  // H.264 GPU — NVIDIA
+  h264_nvenc:    'H.264 NVIDIA GPU 加速 (NVENC) ⚡ — 推荐 N 卡用户',
+  // H.264 GPU — AMD
+  h264_amf:      'H.264 AMD GPU 加速 (AMF) ⚡ — 推荐 A 卡用户',
+  // H.264 GPU — Intel
+  h264_qsv:      'H.264 Intel GPU 加速 (QSV) ⚡ — 推荐 Intel 核显用户',
+  h264_vaapi:    'H.264 VAAPI 硬件加速 — Linux 通用 GPU',
+  h264_vulkan:   'H.264 Vulkan 硬件加速 — 新一代 GPU API',
+  // H.264 Windows built-in
+  h264_mf:       'H.264 Windows 系统编码 (MediaFoundation) — 无需额外驱动',
+  // H.265 software
+  libx265:       'H.265 软件编码 — 更高压缩比，较慢',
+  // H.265 GPU — NVIDIA
+  hevc_nvenc:    'H.265 NVIDIA GPU 加速 (NVENC) ⚡ — 推荐 N 卡用户',
+  // H.265 GPU — AMD
+  hevc_amf:      'H.265 AMD GPU 加速 (AMF) ⚡ — 推荐 A 卡用户',
+  hevc_vaapi:    'H.265 VAAPI 硬件加速 — Linux 通用 GPU',
+  // VP9
+  libvpx:        'VP9 软件编码 — WebM 容器',
+  'libvpx-vp9':  'VP9 软件编码 — WebM 容器，高压缩比',
+  // Fallback
+  mpeg4:         'MPEG-4 基础编码 — 兼容性兜底',
+};
+
 app.get('/api/encoders', (req, res) => {
   const { execFile } = require('child_process');
   const ffmpegBin = ffmpegPath || 'ffmpeg';
   execFile(ffmpegBin, ['-encoders'], { timeout: 10000 }, (err, stdout) => {
-    if (err) return res.json({ encoders: defaultEncoderList() });
+    if (err) return res.json({ encoders: Object.entries(ENCODER_LABELS).slice(0, 5).map(([k,v]) => ({ value: k, label: v })) });
     const lines = stdout.split('\n');
-    const encoders = [];
-    // Parse: " V..... libx264      libx264 H.264 / AVC / MPEG-4 AVC ..."
+    const found = new Set();
     for (const line of lines) {
       const m = line.match(/^\s*[VAS.]+?\s+(\S+)\s+(.+)/);
-      if (m) {
-        const name = m[1], desc = m[2].split('(')[0].trim();
-        encoders.push({ name, desc });
-      }
+      if (m) found.add(m[1]);
     }
-    // Filter to our supported list
-    const wanted = ['libopenh264', 'libx264', 'libx265', 'h264_nvenc', 'h264_amf',
-      'h264_qsv', 'h264_mf', 'h264_vaapi', 'h264_vulkan', 'hevc_nvenc',
-      'hevc_amf', 'hevc_vaapi', 'libvpx-vp9', 'libvpx', 'mpeg4'];
-    const available = encoders.filter(e => wanted.includes(e.name))
-      .map(e => ({ value: e.name, label: e.name + ' (' + e.desc + ')' }));
+    // Return encoders that actually exist, with friendly labels
+    const available = [];
+    for (const [name, label] of Object.entries(ENCODER_LABELS)) {
+      if (found.has(name)) available.push({ value: name, label });
+    }
     if (available.length === 0) {
-      // Fallback: return what we found
-      available.push(...encoders.slice(0, 10).map(e => ({ value: e.name, label: e.name })));
+      // Fallback: any H.264-like encoder we find
+      for (const name of found) {
+        if (name.includes('264') || name.includes('hvc') || name.includes('265'))
+          available.push({ value: name, label: name });
+      }
     }
     res.json({ encoders: available });
   });
 });
-
-function defaultEncoderList() {
-  return [
-    { value: 'libopenh264', label: 'libopenh264 (H.264)' },
-    { value: 'h264_nvenc', label: 'h264_nvenc (NVIDIA GPU)' },
-    { value: 'h264_mf', label: 'h264_mf (Windows)' },
-    { value: 'mpeg4', label: 'mpeg4 (basic)' },
-  ];
-}
 
 // Get video metadata via ffprobe
 app.get('/api/info/:id', (req, res) => {
