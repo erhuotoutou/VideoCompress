@@ -260,6 +260,8 @@ app.post('/api/compress/:id', (req, res) => {
   const outDir = path.dirname(job.outputPath);
   if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
 
+  // Force overwrite and use forward slashes for ffmpeg compatibility
+  cmd.outputOptions(['-y']);
   cmd.output(job.outputPath);
 
   // Log the command
