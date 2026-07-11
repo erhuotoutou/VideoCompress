@@ -694,7 +694,6 @@ class CompressionEngine {
 
   async _decode(samples, description) {
     const frames = [];
-    let configDone = false;
 
     const decoder = new VideoDecoder({
       output: (frame) => { frames.push(frame); },
@@ -702,63 +701,58 @@ class CompressionEngine {
     });
     this.videoDecoder = decoder;
 
-    // Configure decoder - wait for it to be ready
+    // Configure decoder
     let codec = this.originalInfo.codec;
 
-    // Ensure description is a valid ArrayBuffer/ArrayBufferView for WebCodecs
+    // Ensure description is a valid type for WebCodecs
     let safeDesc = null;
     if (description) {
-      if (description instanceof ArrayBuffer || ArrayBuffer.isView(description)) {
+      if (description instanceof ArrayBuffer) {
         safeDesc = description;
+      } else if (ArrayBuffer.isView(description)) {
+        safeDesc = description.buffer.slice(description.byteOffset, description.byteOffset + description.byteLength);
       } else if (description.buffer instanceof ArrayBuffer) {
-        // e.g., mp4box returns a DataView-like object with .buffer
         safeDesc = description.buffer;
-      } else if (typeof description === 'object' && description.data) {
-        // mp4box sometimes wraps in { data: ArrayBuffer }
-        const d = description.data;
-        if (d instanceof ArrayBuffer || ArrayBuffer.isView(d)) safeDesc = d;
-        else if (d?.buffer instanceof ArrayBuffer) safeDesc = d.buffer;
-      }
-      // If still not valid, try wrapping in Uint8Array as last resort
-      if (!safeDesc && (description instanceof Array || typeof description === 'object')) {
-        try { safeDesc = new Uint8Array(Object.values(description)).buffer; } catch {}
       }
     }
 
-    // If codec is just a FOURCC (e.g., 'avc1'), try to construct a full codec string
-    if (codec && !codec.includes('.') && safeDesc) {
-      try {
-        const dv = new DataView(safeDesc instanceof ArrayBuffer ? safeDesc : safeDesc.buffer);
-        if (codec.startsWith('avc') && dv.byteLength >= 4) {
-          const profile = dv.getUint8(1).toString(16).padStart(2, '0');
-          const compat = dv.getUint8(2).toString(16).padStart(2, '0');
-          const level = dv.getUint8(3).toString(16).padStart(2, '0');
-          codec = 'avc1.' + profile + compat + level;
-          log('构建解码器codec: ' + codec);
-        } else if (codec.startsWith('hvc') && dv.byteLength >= 4) {
-          // Simplified H.265 codec string construction
-          const profile = dv.getUint8(1);
-          const level = dv.getUint8(3);
-          codec = 'hvc1.' + profile + '.0.L' + level + '.0';
-          log('构建解码器codec: ' + codec);
-        }
-      } catch { /* keep original codec */ }
+    // Try first with description if available
+    let configured = false;
+    const configs = [];
+
+    if (safeDesc && codec) {
+      configs.push({ codec, description: safeDesc });
+    }
+    // Fallback: try generic codec string (Chrome is lenient with description)
+    if (codec) {
+      const parts = codec.split('.');
+      const generic = parts[0]; // e.g., 'avc1' from 'avc1.4D002A'
+      if (safeDesc && generic !== codec) configs.push({ codec: generic, description: safeDesc });
+    }
+    // Last resort: use a well-known codec
+    const codecFamily = (codec || '').toLowerCase();
+    if (codecFamily.includes('avc') || codecFamily.includes('h264')) {
+      configs.push({ codec: 'avc1.4D002A' }); // H.264 Main Profile, no description
+    } else if (codecFamily.includes('hvc') || codecFamily.includes('h265')) {
+      configs.push({ codec: 'hvc1.1.6.L123.00' }); // H.265 Main Profile
     }
 
-    await new Promise((resolve, reject) => {
+    for (const cfg of configs) {
       try {
-        const config = { codec: codec };
-        if (safeDesc) config.description = safeDesc;
-        log('解码器配置: codec=' + codec + ', desc=' + (safeDesc ? safeDesc.byteLength + 'B' : '无'));
-        decoder.configure(config);
-        configDone = true;
-        resolve();
+        log('尝试解码器配置: ' + JSON.stringify({ codec: cfg.codec, hasDesc: !!cfg.description, descSize: cfg.description?.byteLength }));
+        decoder.configure(cfg);
+        configured = true;
+        log('解码器配置成功: ' + cfg.codec);
+        break;
       } catch (e) {
-        reject(new Error('解码器配置失败: ' + e.message));
+        log('配置失败 (' + cfg.codec + '): ' + e.message, true);
       }
-    });
+    }
 
-    if (!configDone) throw new Error('解码器未成功配置');
+    if (!configured) {
+      decoder.close();
+      throw new Error('解码器配置失败: 所有配置组合都不可用。视频编码: ' + codec);
+    }
 
     // Feed samples
     for (let i = 0; i < samples.length; i++) {
@@ -780,8 +774,8 @@ class CompressionEngine {
       }
     }
 
-    await decoder.flush();
-    decoder.close();
+    try { await decoder.flush(); } catch (e) { log('解码器flush失败: ' + e.message, true); }
+    try { decoder.close(); } catch {}
     this.videoDecoder = null;
     return frames;
   }
