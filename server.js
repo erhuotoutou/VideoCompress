@@ -201,7 +201,7 @@ app.post('/api/compress/:id', (req, res) => {
   job.options = opts;
   job.status = 'processing';
   job.progress = 0;
-  job.outputPath = path.join(__dirname, 'outputs', job.id + '_compressed.mp4');
+  job.outputPath = path.join(__dirname, 'outputs', job.id + '_compressed.mp4').replace(/\\/g, '/');
 
   // Build FFmpeg command
   const cmd = ffmpeg(job.inputPath);
@@ -257,6 +257,10 @@ app.post('/api/compress/:id', (req, res) => {
   // NVIDIA NVENC
   const gpuCodec = codec.includes('265') || codec.includes('hevc') ? 'hevc_nvenc' : 'h264_nvenc';
   // We'll check by trying; ffmpeg will error if not available
+
+  // Ensure output dir exists
+  const outDir = path.dirname(job.outputPath);
+  if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
 
   cmd.output(job.outputPath);
 
