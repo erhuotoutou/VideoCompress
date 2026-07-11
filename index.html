@@ -220,6 +220,34 @@ function showToast(msg,type='info',dur=3000){ const t=document.createElement('di
 function log(msg,isErr=false){ console.log('[VC]',msg);const p=document.getElementById('logPanel');p.classList.add('visible');const l=document.createElement('div');l.className='log-line'+(isErr?' log-error':'');l.textContent=new Date().toLocaleTimeString()+' '+msg;p.appendChild(l);if(p.children.length>50)p.firstChild.remove(); }
 function annexBToAVCC(buffer){ const d=new Uint8Array(buffer),nals=[];let s=0;for(let i=0;i<d.length-2;i++){const is3=d[i]===0&&d[i+1]===0&&d[i+2]===1;const is4=i+3<d.length&&d[i]===0&&d[i+1]===0&&d[i+2]===0&&d[i+3]===1;if(is3||is4){if(s<i)nals.push(d.subarray(s,i));s=is4?i+4:i+3;i=s-1;}}if(s<d.length)nals.push(d.subarray(s));if(nals.length===0)return buffer;const total=nals.reduce((a,n)=>a+4+n.length,0);const avcc=new Uint8Array(total);let p=0;for(const n of nals){avcc[p]=(n.length>>24)&0xff;avcc[p+1]=(n.length>>16)&0xff;avcc[p+2]=(n.length>>8)&0xff;avcc[p+3]=n.length&0xff;avcc.set(n,p+4);p+=4+n.length;}return avcc.buffer; }
 
+// Pick appropriate codec level based on target resolution
+function pickCodecForResolution(codec, w, h) {
+  const pixels = w * h;
+  const isHevc = codec.includes('hvc') || codec.includes('hev');
+  const isAv1 = codec.includes('av01');
+
+  // H.265: hvc1.1.6.L{level}.90 → bump level for resolution
+  if (isHevc) {
+    if (pixels <= 1920*1080) return 'hvc1.1.6.L93.90';    // Level 4
+    if (pixels <= 3840*2160) return 'hvc1.1.6.L120.90';   // Level 5
+    if (pixels <= 7680*4320) return 'hvc1.1.6.L150.90';   // Level 6
+    return codec; // keep original for fallback
+  }
+
+  // H.264: avc1.{profile}{compat}{level} → bump level for resolution
+  if (codec.includes('avc')) {
+    // H.264 levels: 4.2=0x2A, 5.0=0x32, 5.1=0x34, 5.2=0x36, 6.0=0x3C
+    if (pixels <= 720*480)        return 'avc1.64001E'; // High L3.0 ~1M
+    if (pixels <= 1920*1080)      return 'avc1.64002A'; // High L4.2 ~2M
+    if (pixels <= 2560*1440)      return 'avc1.640032'; // High L5.0 ~3.7M
+    if (pixels <= 3840*2160)      return 'avc1.640034'; // High L5.1 ~8.3M
+    if (pixels <= 4096*2304)      return 'avc1.640036'; // High L5.2 ~9.4M
+    return 'avc1.64003C';                               // High L6.0 ~35M
+  }
+
+  return codec; // VP9, AV1 etc. don't need level adjustment
+}
+
 // =============================================
 // COMPATIBILITY
 // =============================================
@@ -227,7 +255,7 @@ async function checkCompat(){
   const r={supported:false,codecs:[],warnings:[],aacSupported:false};
   if(typeof VideoEncoder==='undefined'||typeof VideoDecoder==='undefined'){r.warnings.push(t('unsupportedBrowser'));return r;}
   r.supported=true;
-  const cfgs=[{codec:'avc1.42001E',label:'H.264 Baseline'},{codec:'avc1.4D002A',label:'H.264 Main'},{codec:'avc1.640028',label:'H.264 High'},{codec:'hvc1.1.6.L120.90',label:'H.265/HEVC'},{codec:'vp09.00.10.08',label:'VP9'},{codec:'av01.0.04M.08',label:'AV1'}];
+  const cfgs=[{codec:'avc1.42001E',label:'H.264 Baseline'},{codec:'avc1.4D002A',label:'H.264 Main'},{codec:'avc1.64002A',label:'H.264 High'},{codec:'avc1.640034',label:'H.264 High 5.1 (4K)'},{codec:'hvc1.1.6.L120.90',label:'H.265/HEVC'},{codec:'vp09.00.10.08',label:'VP9'},{codec:'av01.0.04M.08',label:'AV1'}];
   for(const c of cfgs){try{const s=await VideoEncoder.isConfigSupported({codec:c.codec,width:1920,height:1080,bitrate:5e6,framerate:30});c.supported=s.supported===true;if(s.supported){const hw=await VideoEncoder.isConfigSupported({codec:c.codec,width:1920,height:1080,bitrate:5e6,framerate:30,hardwareAcceleration:'prefer-hardware'});c.hardwareAccelerated=hw.supported===true;}}catch{c.supported=false;c.hardwareAccelerated=false;}r.codecs.push(c);}
   if(typeof AudioEncoder!=='undefined'){try{const a=await AudioEncoder.isConfigSupported({codec:'mp4a.40.2',sampleRate:48000,numberOfChannels:2});r.aacSupported=a.supported===true;}catch{r.aacSupported=false;}}
   return r;
@@ -246,7 +274,7 @@ async function extractMediaInfo(task){
   catch(err){console.error(err);log('ERROR: '+task.file.name+' - '+err.message,true);task.originalInfo={width:0,height:0,duration:0,fps:0,codec:'',codecLabel:'?',videoBitrate:0,audioBitrate:0,hasAudio:false,error:err.message};task.options=getDefaultOptions(task.originalInfo);renderQueue();}
 }
 function parseVideoFile(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=(e)=>{const buf=e.target.result;const mf=MP4Box.createFile();const info={width:0,height:0,duration:0,fps:0,codec:'',codecLabel:'',videoBitrate:0,audioBitrate:0,hasAudio:false,videoTrackId:0,audioTrackId:0,trackInfo:null};let resolved=false;mf.onReady=(mi)=>{info.trackInfo=mi;if(!mi.videoTracks||mi.videoTracks.length===0){if(!resolved){resolved=true;reject(new Error('No video track'));}return;}const vt=mi.videoTracks[0];info.width=vt.track_width;info.height=vt.track_height;info.codec=vt.codec||'';info.codecLabel=getCodecLabel(vt.codec||'');info.videoTrackId=vt.id;const td=vt.samples_duration||(mi.duration/(mi.timescale||1)*(vt.timescale||1));const tts=vt.timescale||mi.timescale||1;const nb=vt.nb_samples||0;if(nb>0&&td>0)info.fps=Math.round(nb/(td/tts));info.duration=(vt.samples_duration||mi.duration)/(vt.timescale||mi.timescale||1);const ds=info.duration||1;info.videoBitrate=Math.round((file.size*0.9*8)/ds);info.audioBitrate=0;if(mi.audioTracks&&mi.audioTracks.length>0){info.hasAudio=true;info.audioTrackId=mi.audioTracks[0].id;info.audioBitrate=128000;}if(!resolved){resolved=true;resolve(info);}};mf.onError=()=>{if(!resolved){resolved=true;reject(new Error('Parse failed'));}};buf.fileStart=0;mf.appendBuffer(buf);mf.flush();setTimeout(()=>{if(!resolved){resolved=true;reject(new Error('Metadata timeout'));}},5000);};r.onerror=()=>reject(new Error('Read failed'));r.readAsArrayBuffer(file);});}
-function getDefaultOptions(info){if(!compatibilityResult)return{width:info.width||1920,height:info.height||1080,codec:'avc1.42001E',codecLabel:'H.264',videoBitrate:5e6,bitrateMode:'vbr',fps:info.fps||30,audioBitrate:128000,keepOriginalFps:true};const av=getAvailableCodecs(compatibilityResult);const def=av.find(c=>c.value.includes('avc1.4D002A'))||av[0]||{value:'avc1.42001E',label:'H.264'};const px=(info.width||1920)*(info.height||1080);let br;if(px>=3840*2160)br=35e6;else if(px>=2560*1440)br=16e6;else if(px>=1920*1080)br=8e6;else if(px>=1280*720)br=5e6;else br=2.5e6;return{width:info.width||1920,height:info.height||1080,codec:def.value,codecLabel:def.label,videoBitrate:Math.min(info.videoBitrate||br,br),bitrateMode:'vbr',fps:info.fps||30,audioBitrate:128000,keepOriginalFps:true};}
+function getDefaultOptions(info){if(!compatibilityResult)return{width:info.width||1920,height:info.height||1080,codec:'avc1.42001E',codecLabel:'H.264',videoBitrate:5e6,bitrateMode:'vbr',fps:info.fps||30,audioBitrate:128000,keepOriginalFps:true};const av=getAvailableCodecs(compatibilityResult);const px2=(info.width||1920)*(info.height||1080);const is4K=px2>=3840*2160*0.9;const preferred=is4K?'avc1.640034':'avc1.64002A';const def=av.find(c=>c.value===preferred)||av.find(c=>c.value.includes('avc1.6'))||av[0]||{value:'avc1.42001E',label:'H.264'};let br;if(px2>=3840*2160)br=35e6;else if(px2>=2560*1440)br=16e6;else if(px2>=1920*1080)br=8e6;else if(px2>=1280*720)br=5e6;else br=2.5e6;return{width:info.width||1920,height:info.height||1080,codec:def.value,codecLabel:def.label,videoBitrate:Math.min(info.videoBitrate||br,br),bitrateMode:'vbr',fps:info.fps||30,audioBitrate:128000,keepOriginalFps:true};}
 
 // =============================================
 // FILE MANAGEMENT
@@ -411,13 +439,15 @@ class CompressionEngine {
   // Encode a single frame (lazy-init encoder)
   async _encodeFrame(frame){
     if(!this.videoEncoder){
+      const codec = pickCodecForResolution(this.options.codec, this.options.width, this.options.height);
       const encoder=new VideoEncoder({
         output:(chunk)=>{const d=new Uint8Array(chunk.byteLength);chunk.copyTo(d);this.encodedVideoChunks.push({data:d,byteLength:chunk.byteLength,timestamp:chunk.timestamp,duration:chunk.duration,type:chunk.type});},
         error:(err)=>{console.error(err);log('Encode error: '+err.message,true);this._reject?.(new Error('Encode error: '+err.message));},
       });
       this.videoEncoder=encoder;
-      await encoder.configure({codec:this.options.codec,width:this.options.width,height:this.options.height,bitrate:this.options.videoBitrate,framerate:this.options.fps,hardwareAcceleration:'prefer-hardware',...(this.options.bitrateMode==='cbr'?{latencyMode:'realtime'}:{})});
-      log('Encoder configured: '+this.options.codec+' '+this.options.width+'x'+this.options.height+' @ '+formatBitrate(this.options.videoBitrate));
+      await encoder.configure({codec,width:this.options.width,height:this.options.height,bitrate:this.options.videoBitrate,framerate:this.options.fps,hardwareAcceleration:'prefer-hardware',...(this.options.bitrateMode==='cbr'?{latencyMode:'realtime'}:{})});
+      this.options._actualCodec = codec;
+      log('Encoder: '+codec+' '+this.options.width+'x'+this.options.height+' @ '+formatBitrate(this.options.videoBitrate));
     }
     try{this.videoEncoder.encode(frame);}catch(e){/* skip */}
   }
@@ -439,7 +469,7 @@ class CompressionEngine {
   async _muxToMp4(){
     const mux=MP4Box.createFile();const vts=this.options.fps*1000;
     const vId=mux.addTrack({type:'video',width:this.options.width,height:this.options.height,timescale:vts,nb_samples:this.encodedVideoChunks.length,video:{width:this.options.width,height:this.options.height}});
-    for(const c of this.encodedVideoChunks){const avcc=this.options.codec.includes('avc')?annexBToAVCC(c.data.buffer):c.data.buffer;mux.addSample(vId,new Uint8Array(avcc),{duration:Math.round((c.duration/1e6)*vts),dts:Math.round((c.timestamp/1e6)*vts),cts:Math.round((c.timestamp/1e6)*vts),is_sync:c.type==='key'});}
+    for(const c of this.encodedVideoChunks){const usedCodec=this.options._actualCodec||this.options.codec;const avcc=usedCodec.includes('avc')?annexBToAVCC(c.data.buffer):c.data.buffer;mux.addSample(vId,new Uint8Array(avcc),{duration:Math.round((c.duration/1e6)*vts),dts:Math.round((c.timestamp/1e6)*vts),cts:Math.round((c.timestamp/1e6)*vts),is_sync:c.type==='key'});}
     if(this.encodedAudioChunks.length>0){const ats=48000;const aId=mux.addTrack({type:'audio',timescale:ats,nb_samples:this.encodedAudioChunks.length,audio:{sample_rate:48000,channel_count:2,sample_size:16}});for(const c of this.encodedAudioChunks)mux.addSample(aId,c.data,{duration:Math.round((c.duration/1e6)*ats),dts:Math.round((c.timestamp/1e6)*ats),cts:Math.round((c.timestamp/1e6)*ats),is_sync:true});}
     return new Promise((res,rej)=>{mux.saveData=(data)=>{const b=new Blob([data],{type:'video/mp4'});if(b.size===0)rej(new Error('Mux output empty'));else res(b);};try{mux.save('file.mp4');}catch(e){rej(e);}});
   }
