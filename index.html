@@ -373,14 +373,26 @@ class CompressionEngine {
       this.reportProgress('decode',0);
       await this._captureAndEncode(url);
       if(this.signal?.aborted)throw new Error('Cancelled');
-      if(this.videoEncoder){try{await this.videoEncoder.flush();}catch(e){log('Encoder flush error: '+e.message,true);}}
+      // Give encoder time to process queue, then flush with timeout
+      if(this.videoEncoder&&!this._encoderCrashed){
+        log('Waiting for encoder to drain...');
+        await new Promise(r=>setTimeout(r,1000)); // Let GPU finish pending work
+        const flushResult = await Promise.race([
+          this.videoEncoder.flush().then(()=>'ok'),
+          new Promise(r=>setTimeout(()=>r('timeout'),30000)),
+        ]);
+        if(flushResult==='timeout'){log('Encoder flush timed out after 30s',true);}
+      }
       log('Encoded: '+this.encodedVideoChunks.length+' chunks');
       if(this.encodedVideoChunks.length===0)throw new Error(t('decodeError'));
       if(this.options.audioBitrate>0&&this.originalInfo.hasAudio){this.reportProgress('audio',50);try{await this._extractAndEncodeAudio(url);}catch(e){log('Audio skipped: '+e.message,true);}}
       this.reportProgress('mux',90);const blob=await this._muxToMp4();
       log('Muxed: '+formatSize(blob.size));this.reportProgress('done',100);
       this._resolve({blob,size:blob.size,url:URL.createObjectURL(blob)});
-    }finally{URL.revokeObjectURL(url);}
+    }finally{
+      URL.revokeObjectURL(url);
+      try{this.videoEncoder?.close();}catch{}
+    }
   }
   // Play video and capture frames via createImageBitmap (avoids canvas GPU texture)
   async _captureAndEncode(url){
@@ -437,10 +449,10 @@ class CompressionEngine {
     const codec = pickCodecForResolution(this.options.codec, this.options.width, this.options.height);
     const cfg = {codec,width:this.options.width,height:this.options.height,bitrate:this.options.videoBitrate,framerate:this.options.fps,...(this.options.bitrateMode==='cbr'?{latencyMode:'realtime'}:{})};
     this.options._actualCodec = codec;
+    this._encoderCrashed = false;
 
     // Try GPU first, then CPU
     for (const useHW of [true, false]) {
-      if (this._encoderCrashed) break;
       const accel = useHW ? 'prefer-hardware' : 'prefer-software';
 
       // Check config support
@@ -456,7 +468,7 @@ class CompressionEngine {
           const d=new Uint8Array(chunk.byteLength);chunk.copyTo(d);
           this.encodedVideoChunks.push({data:d,byteLength:chunk.byteLength,timestamp:chunk.timestamp,duration:chunk.duration,type:chunk.type});
         },
-        error:(err)=>{ encoderError = err; },
+        error:(err)=>{ encoderError = err; this._encoderCrashed = true; },
       });
 
       try {
