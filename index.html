@@ -578,290 +578,283 @@ function setupParamListeners(task) {
 }
 
 // =============================================
-// COMPRESSION ENGINE (FIXED)
+// COMPRESSION ENGINE (video-element-based decode)
 // =============================================
 
 class CompressionEngine {
   constructor(file, options, originalInfo, onProgress, signal) {
     this.file = file; this.options = options; this.originalInfo = originalInfo;
     this.onProgress = onProgress; this.signal = signal;
-    this.videoDecoder = null; this.videoEncoder = null; this.audioEncoder = null;
-    this.canvas = null; this.ctx = null;
+    this.videoEncoder = null; this.audioEncoder = null;
+    this.videoEl = null; this.canvas = null; this.ctx = null;
     this.encodedVideoChunks = []; this.encodedAudioChunks = [];
     this.startTime = 0; this.aborted = false;
     this._resolve = null; this._reject = null;
-    this._mp4boxFile = null; // Keep reference for cleanup
   }
 
   async start() { return new Promise((res, rej) => { this._resolve = res; this._reject = rej; this._run().catch(rej); }); }
 
   async _run() {
     this.startTime = performance.now();
+    const url = URL.createObjectURL(this.file);
     log('开始压缩: ' + this.file.name + ' → ' + this.options.width + 'x' + this.options.height + ' ' + formatBitrate(this.options.videoBitrate));
-    this.reportProgress('demux', 0);
-    if (this.signal?.aborted) throw new Error('已取消');
 
-    // 1. Read file
-    const buffer = await this._readFile();
-    if (this.signal?.aborted) throw new Error('已取消');
+    try {
+      // 1. Decode + Encode frames via <video> element
+      // _extractFramesFromVideo encodes frames inline via _encodeBatch
+      this.reportProgress('decode', 0);
+      await this._extractFramesFromVideo(url);
+      if (this.signal?.aborted) throw new Error('已取消');
 
-    // 2. Demux
-    this.reportProgress('demux', 30);
-    const { videoSamples, audioSamples, description } = await this._demux(buffer);
-    log(`Demux: ${videoSamples.length} 视频样本, ${audioSamples.length} 音频样本`);
-    if (this.signal?.aborted) throw new Error('已取消');
-    if (videoSamples.length === 0) throw new Error('未提取到视频数据（可能是容器格式不支持）');
-
-    // 3. Decode
-    this.reportProgress('decode', 0);
-    const frames = await this._decode(videoSamples, description);
-    log(`解码: ${frames.length} 帧`);
-    if (this.signal?.aborted) throw new Error('已取消');
-    if (frames.length === 0) throw new Error('解码失败，未生成视频帧（可能是编码格式不支持）');
-
-    // 4. Encode
-    this.reportProgress('encode', 0);
-    await this._encode(frames);
-    log(`编码: ${this.encodedVideoChunks.length} 个数据块`);
-    if (this.signal?.aborted) throw new Error('已取消');
-    if (this.encodedVideoChunks.length === 0) throw new Error('编码失败，未生成输出数据');
-
-    // 5. Audio
-    if (audioSamples.length > 0 && this.options.audioBitrate > 0) {
-      this.reportProgress('audio', 50);
-      await this._processAudio(audioSamples);
-    }
-
-    // 6. Mux
-    this.reportProgress('mux', 90);
-    const blob = await this._mux();
-    log(`封装: ${formatSize(blob.size)}`);
-    this.reportProgress('done', 100);
-    this._resolve({ blob, size: blob.size, url: URL.createObjectURL(blob) });
-  }
-
-  _readFile() {
-    return new Promise((res, rej) => {
-      const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = () => rej(new Error('读取失败')); r.readAsArrayBuffer(this.file);
-    });
-  }
-
-  _demux(buffer) {
-    return new Promise((resolve, reject) => {
-      const mp4box = MP4Box.createFile();
-      this._mp4boxFile = mp4box;
-      const videoSamples = [], audioSamples = [];
-      let desc = null, ready = false, done = false;
-      const vtId = this.originalInfo.videoTrackId;
-      const atId = this.originalInfo.audioTrackId;
-
-      mp4box.onReady = (info) => {
-        const vt = info.videoTracks?.[0], at = info.audioTracks?.[0];
-        if (!vt) { reject(new Error('无视频轨道')); return; }
-        // Extract ALL samples
-        mp4box.setExtractionOptions(vt.id, null, { nbSamples: 500000 });
-        if (at) mp4box.setExtractionOptions(at.id, null, { nbSamples: 500000 });
-        mp4box.start(); // ← CRITICAL FIX: call start() to begin extraction!
-        ready = true;
-        // After start(), onSamples fires synchronously for buffered data
-        // Small delay to ensure all callbacks fire
-        setTimeout(() => { done = true; }, 50);
-      };
-
-      mp4box.onSamples = (trackId, user, samples) => {
-        const target = trackId === vtId ? videoSamples : audioSamples;
-        for (const s of samples) {
-          target.push({ data: s.data, size: s.size, dts: s.dts, cts: s.cts, duration: s.duration, is_sync: s.is_sync, description: s.description });
-          if (trackId === vtId && s.is_sync && s.description && !desc) desc = s.description;
-        }
-      };
-
-      mp4box.onError = (err) => reject(new Error('Demux失败: ' + err));
-
-      buffer.fileStart = 0;
-      mp4box.appendBuffer(buffer);
-      mp4box.flush();
-
-      // Wait for extraction to complete
-      const check = setInterval(() => {
-        if (!done) return;
-        clearInterval(check);
-        resolve({ videoSamples, audioSamples, description: desc || this.originalInfo.description });
-      }, 20);
-      setTimeout(() => { clearInterval(check); reject(new Error('Demux超时')); }, 15000);
-    });
-  }
-
-  async _decode(samples, description) {
-    const frames = [];
-
-    const decoder = new VideoDecoder({
-      output: (frame) => { frames.push(frame); },
-      error: (err) => { console.error('Decode error:', err); log('解码错误: ' + err.message, true); },
-    });
-    this.videoDecoder = decoder;
-
-    // Configure decoder
-    let codec = this.originalInfo.codec;
-
-    // Ensure description is a valid type for WebCodecs
-    let safeDesc = null;
-    if (description) {
-      if (description instanceof ArrayBuffer) {
-        safeDesc = description;
-      } else if (ArrayBuffer.isView(description)) {
-        safeDesc = description.buffer.slice(description.byteOffset, description.byteOffset + description.byteLength);
-      } else if (description.buffer instanceof ArrayBuffer) {
-        safeDesc = description.buffer;
+      // Flush encoder
+      if (this.videoEncoder) {
+        try { await this.videoEncoder.flush(); } catch (e) { log('编码器flush失败: ' + e.message, true); }
       }
-    }
 
-    // Try first with description if available
-    let configured = false;
-    const configs = [];
+      log(`编码完成: ${this.encodedVideoChunks.length} 个数据块`);
+      if (this.encodedVideoChunks.length === 0) throw new Error('编码失败，未生成输出数据');
 
-    if (safeDesc && codec) {
-      configs.push({ codec, description: safeDesc });
-    }
-    // Fallback: try generic codec string (Chrome is lenient with description)
-    if (codec) {
-      const parts = codec.split('.');
-      const generic = parts[0]; // e.g., 'avc1' from 'avc1.4D002A'
-      if (safeDesc && generic !== codec) configs.push({ codec: generic, description: safeDesc });
-    }
-    // Last resort: use a well-known codec
-    const codecFamily = (codec || '').toLowerCase();
-    if (codecFamily.includes('avc') || codecFamily.includes('h264')) {
-      configs.push({ codec: 'avc1.4D002A' }); // H.264 Main Profile, no description
-    } else if (codecFamily.includes('hvc') || codecFamily.includes('h265')) {
-      configs.push({ codec: 'hvc1.1.6.L123.00' }); // H.265 Main Profile
-    }
-
-    for (const cfg of configs) {
-      try {
-        log('尝试解码器配置: ' + JSON.stringify({ codec: cfg.codec, hasDesc: !!cfg.description, descSize: cfg.description?.byteLength }));
-        decoder.configure(cfg);
-        configured = true;
-        log('解码器配置成功: ' + cfg.codec);
-        break;
-      } catch (e) {
-        log('配置失败 (' + cfg.codec + '): ' + e.message, true);
+      // 3. Extract and encode audio
+      if (this.options.audioBitrate > 0 && this.originalInfo.hasAudio) {
+        this.reportProgress('audio', 50);
+        try { await this._extractAndEncodeAudio(url); } catch (e) { log('音频处理失败(跳过): ' + e.message, true); }
       }
+
+      // 4. Mux into MP4
+      this.reportProgress('mux', 90);
+      const blob = await this._muxToMp4();
+      log(`封装完成: ${formatSize(blob.size)}`);
+
+      this.reportProgress('done', 100);
+      this._resolve({ blob, size: blob.size, url: URL.createObjectURL(blob) });
+    } finally {
+      URL.revokeObjectURL(url);
     }
-
-    if (!configured) {
-      decoder.close();
-      throw new Error('解码器配置失败: 所有配置组合都不可用。视频编码: ' + codec);
-    }
-
-    // Feed samples
-    for (let i = 0; i < samples.length; i++) {
-      if (this.signal?.aborted) break;
-      try {
-        const s = samples[i];
-        const chunk = new EncodedVideoChunk({
-          type: s.is_sync ? 'key' : 'delta',
-          timestamp: (s.cts || s.dts || 0) * 1_000_000,
-          duration: (s.duration || 1) * 1_000_000,
-          data: s.data,
-        });
-        decoder.decode(chunk);
-      } catch (e) { console.warn('Feed error at', i, ':', e.message); }
-
-      if (i % 200 === 0) {
-        this.reportProgress('decode', Math.round((i / samples.length) * 90));
-        await new Promise(r => setTimeout(r, 0));
-      }
-    }
-
-    try { await decoder.flush(); } catch (e) { log('解码器flush失败: ' + e.message, true); }
-    try { decoder.close(); } catch {}
-    this.videoDecoder = null;
-    return frames;
   }
 
-  async _encode(frames) {
+  // Extract frames using <video> + Canvas (browser's native decoder)
+  async _extractFramesFromVideo(url) {
+    const video = document.createElement('video');
+    this.videoEl = video;
+    video.src = url;
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+
+    // Wait for metadata
+    await new Promise((resolve, reject) => {
+      video.onloadedmetadata = () => resolve();
+      video.onerror = () => reject(new Error('浏览器无法播放此视频（格式不支持或编码损坏）'));
+      setTimeout(() => reject(new Error('视频加载超时')), 15000);
+    });
+
+    const duration = video.duration;
+    const srcW = video.videoWidth;
+    const srcH = video.videoHeight;
+    log(`视频信息: ${srcW}x${srcH}, ${duration.toFixed(1)}秒`);
+
+    if (!duration || duration <= 0) throw new Error('无法获取视频时长');
+
+    // Canvas for frame capture
     this.canvas = document.createElement('canvas');
     this.canvas.width = this.options.width;
     this.canvas.height = this.options.height;
     this.ctx = this.canvas.getContext('2d');
 
-    const encoder = new VideoEncoder({
-      output: (chunk, meta) => {
-        const data = new Uint8Array(chunk.byteLength);
-        chunk.copyTo(data);
-        this.encodedVideoChunks.push({ data, byteLength: chunk.byteLength, timestamp: chunk.timestamp, duration: chunk.duration, type: chunk.type });
-      },
-      error: (err) => { console.error('Encode error:', err); log('编码错误: ' + err.message, true); this._reject?.(new Error('编码错误: ' + err.message)); },
-    });
-    this.videoEncoder = encoder;
+    const targetFps = this.options.fps;
+    const frameInterval = 1 / targetFps;
+    const totalFrames = Math.floor(duration * targetFps);
+    const frames = []; // Store { time } positions, not VideoFrames (memory!)
 
-    // Configure encoder with hardware acceleration
-    await encoder.configure({
-      codec: this.options.codec,
-      width: this.options.width,
-      height: this.options.height,
-      bitrate: this.options.videoBitrate,
-      framerate: this.options.fps,
-      hardwareAcceleration: 'prefer-hardware',
-      ...(this.options.bitrateMode === 'cbr' ? { latencyMode: 'realtime' } : {}),
-    });
-    log('编码器已配置: ' + this.options.codec + ' ' + this.options.width + 'x' + this.options.height + ' @ ' + formatBitrate(this.options.videoBitrate));
+    log(`计划提取 ${totalFrames} 帧 (${targetFps}fps × ${duration.toFixed(1)}s)`);
 
-    const srcFps = this.originalInfo.fps || 30;
-    const tgtFps = this.options.fps;
-    const skip = Math.max(1, Math.round(srcFps / tgtFps));
-    const frameDur = Math.round(1_000_000 / tgtFps);
-    let ts = 0, cnt = 0;
-
-    for (let i = 0; i < frames.length; i += skip) {
+    // Seek through video and capture frames
+    for (let i = 0; i < totalFrames; i++) {
       if (this.signal?.aborted) break;
+
+      const seekTime = i * frameInterval;
+      if (seekTime >= duration) break;
+
       try {
-        const frame = frames[i];
-        this.ctx.drawImage(frame, 0, 0, this.options.width, this.options.height);
-        const pf = new VideoFrame(this.canvas, { timestamp: ts, duration: frameDur });
-        encoder.encode(pf);
-        pf.close();
-        // Close frames behind us to free memory
-        for (let j = i; j >= Math.max(0, i - 5); j--) { try { frames[j]?.close(); } catch {} }
-      } catch (e) { /* skip */ }
-      ts += frameDur; cnt++;
-      if (cnt % 10 === 0) {
-        this.reportProgress('encode', Math.round((cnt / Math.ceil(frames.length / skip)) * 95));
+        // Seek and wait for frame
+        video.currentTime = seekTime;
+        await new Promise((resolve) => {
+          const onSeeked = () => { video.removeEventListener('seeked', onSeeked); resolve(); };
+          video.addEventListener('seeked', onSeeked);
+          setTimeout(() => { video.removeEventListener('seeked', onSeeked); resolve(); }, 5000);
+        });
+
+        if (video.readyState >= 2) {
+          // Draw frame to canvas at target resolution
+          this.ctx.drawImage(video, 0, 0, this.options.width, this.options.height);
+          // Create VideoFrame from canvas immediately (keep a small window)
+          const frame = new VideoFrame(this.canvas, {
+            timestamp: i * Math.round(1_000_000 / targetFps),
+            duration: Math.round(1_000_000 / targetFps),
+          });
+          frames.push(frame);
+
+          // Encode in batches to manage memory
+          if (frames.length >= 30) {
+            await this._encodeBatch(frames.splice(0, frames.length));
+          }
+        }
+      } catch (e) { /* skip bad frame */ }
+
+      const pct = Math.round(((i + 1) / totalFrames) * 90);
+      if (i % 10 === 0) {
+        this.reportProgress('decode', pct);
         await new Promise(r => setTimeout(r, 0));
       }
     }
 
-    for (const f of frames) { try { f.close(); } catch {} }
-    await encoder.flush();
-    encoder.close();
-    this.videoEncoder = null;
+    // Encode remaining frames
+    if (frames.length > 0) {
+      await this._encodeBatch(frames);
+    }
+
+    log(`实际提取/编码 ${this.encodedVideoChunks.length} 个数据块`);
+    return []; // Frames already consumed via _encodeBatch
   }
 
-  async _processAudio(samples) {
+  // Encode a batch of VideoFrames
+  async _encodeBatch(frames) {
+    if (frames.length === 0) return;
+
+    // Lazy-init encoder
+    if (!this.videoEncoder) {
+      const encoder = new VideoEncoder({
+        output: (chunk) => {
+          const data = new Uint8Array(chunk.byteLength);
+          chunk.copyTo(data);
+          this.encodedVideoChunks.push({
+            data, byteLength: chunk.byteLength,
+            timestamp: chunk.timestamp, duration: chunk.duration,
+            type: chunk.type,
+          });
+        },
+        error: (err) => {
+          console.error('Encode error:', err);
+          log('编码错误: ' + err.message, true);
+          this._reject?.(new Error('编码错误: ' + err.message));
+        },
+      });
+      this.videoEncoder = encoder;
+
+      await encoder.configure({
+        codec: this.options.codec,
+        width: this.options.width,
+        height: this.options.height,
+        bitrate: this.options.videoBitrate,
+        framerate: this.options.fps,
+        hardwareAcceleration: 'prefer-hardware',
+        ...(this.options.bitrateMode === 'cbr' ? { latencyMode: 'realtime' } : {}),
+      });
+      log('编码器已配置: ' + this.options.codec + ' ' + this.options.width + 'x' + this.options.height + ' @ ' + formatBitrate(this.options.videoBitrate));
+    }
+
+    for (const frame of frames) {
+      if (this.signal?.aborted) break;
+      try {
+        this.videoEncoder.encode(frame);
+      } catch (e) { /* skip */ }
+      try { frame.close(); } catch {}
+    }
+  }
+
+  // Extract and encode audio
+  async _extractAndEncodeAudio(url) {
+    const response = await fetch(url);
+    const buffer = await response.arrayBuffer();
+    const audioCtx = new AudioContext({ sampleRate: 48000 });
+    let audioBuffer;
+    try { audioBuffer = await audioCtx.decodeAudioData(buffer.slice(0)); }
+    catch (e) { audioCtx.close(); log('音频解码失败(跳过): ' + e.message, true); return; }
+
+    const srcSampleRate = audioBuffer.sampleRate;
+    const channels = Math.min(audioBuffer.numberOfChannels, 2);
+    const totalSamples = audioBuffer.length;
+
+    // Resample to 48000 if needed via OfflineAudioContext
+    let finalBuffer = audioBuffer;
+    if (srcSampleRate !== 48000) {
+      const offlineCtx = new OfflineAudioContext({ numberOfChannels: channels, sampleRate: 48000, length: Math.ceil(totalSamples * 48000 / srcSampleRate) });
+      const source = offlineCtx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(offlineCtx.destination);
+      source.start(0);
+      finalBuffer = await offlineCtx.startRendering();
+    }
+
+    audioCtx.close();
+
+    // Setup AudioEncoder
     const encoder = new AudioEncoder({
-      output: (chunk) => { const d = new Uint8Array(chunk.byteLength); chunk.copyTo(d); this.encodedAudioChunks.push({ data: d, byteLength: chunk.byteLength, timestamp: chunk.timestamp, duration: chunk.duration, type: chunk.type }); },
-      error: (e) => console.error('Audio encode:', e),
+      output: (chunk) => {
+        const data = new Uint8Array(chunk.byteLength);
+        chunk.copyTo(data);
+        this.encodedAudioChunks.push({ data, byteLength: chunk.byteLength, timestamp: chunk.timestamp, duration: chunk.duration, type: chunk.type });
+      },
+      error: (e) => { console.error('Audio encode error:', e); log('音频编码错误: ' + e.message, true); },
     });
     this.audioEncoder = encoder;
-    await encoder.configure({ codec: 'mp4a.40.2', sampleRate: 48000, numberOfChannels: 2, bitrate: this.options.audioBitrate || 128000 });
-    for (const s of samples) {
+
+    await encoder.configure({ codec: 'mp4a.40.2', sampleRate: 48000, numberOfChannels: channels, bitrate: this.options.audioBitrate || 128000 });
+    log('音频编码器已配置: AAC ' + channels + 'ch @ ' + formatBitrate(this.options.audioBitrate || 128000));
+
+    // Feed audio in chunks (AAC works best with 1024-sample frames)
+    const frameSize = 1024;
+    const numFrames = Math.ceil(finalBuffer.length / frameSize);
+    let ts = 0;
+
+    for (let i = 0; i < numFrames; i++) {
       if (this.signal?.aborted) break;
-      try { encoder.encode(new EncodedAudioChunk({ type: s.is_sync ? 'key' : 'delta', timestamp: (s.cts || s.dts || 0) * 1_000_000, duration: (s.duration || 1) * 1_000_000, data: s.data })); } catch {}
+      const offset = i * frameSize;
+      const remaining = Math.min(frameSize, finalBuffer.length - offset);
+
+      // Build interleaved Float32Array: [L0,R0, L1,R1, ...]
+      const interleaved = new Float32Array(remaining * channels);
+      for (let ch = 0; ch < channels; ch++) {
+        const chData = finalBuffer.getChannelData(ch);
+        for (let j = 0; j < remaining; j++) {
+          interleaved[j * channels + ch] = chData[offset + j];
+        }
+      }
+
+      try {
+        const audioData = new AudioData({
+          format: 'f32',
+          sampleRate: 48000,
+          numberOfFrames: remaining,
+          numberOfChannels: channels,
+          timestamp: ts,
+          data: interleaved,
+        });
+        encoder.encode(audioData);
+        audioData.close();
+        ts += remaining * 1_000_000 / 48000;
+      } catch (e) { /* skip bad frame */ }
     }
-    await encoder.flush(); encoder.close();
+
+    try { await encoder.flush(); } catch {}
+    try { encoder.close(); } catch {}
+    log('音频编码完成: ' + this.encodedAudioChunks.length + ' 个数据块');
   }
 
-  async _mux() {
+  // Mux video + audio into MP4
+  async _muxToMp4() {
     const mux = MP4Box.createFile();
     const vts = this.options.fps * 1000;
 
-    const vId = mux.addTrack({ type: 'video', width: this.options.width, height: this.options.height, timescale: vts, nb_samples: this.encodedVideoChunks.length, video: { width: this.options.width, height: this.options.height } });
+    const vId = mux.addTrack({
+      type: 'video', width: this.options.width, height: this.options.height,
+      timescale: vts, nb_samples: this.encodedVideoChunks.length,
+      video: { width: this.options.width, height: this.options.height },
+    });
 
     for (const c of this.encodedVideoChunks) {
-      // Convert AnnexB to AVCC for mp4box.js compatibility
-      const avccData = this.options.codec.includes('avc') ? annexBToAVCC(c.data.buffer) : c.data.buffer;
-      mux.addSample(vId, new Uint8Array(avccData), {
+      const avcc = this.options.codec.includes('avc') ? annexBToAVCC(c.data.buffer) : c.data.buffer;
+      mux.addSample(vId, new Uint8Array(avcc), {
         duration: Math.round((c.duration / 1_000_000) * vts),
         dts: Math.round((c.timestamp / 1_000_000) * vts),
         cts: Math.round((c.timestamp / 1_000_000) * vts),
@@ -871,14 +864,26 @@ class CompressionEngine {
 
     if (this.encodedAudioChunks.length > 0) {
       const ats = 48000;
-      const aId = mux.addTrack({ type: 'audio', timescale: ats, nb_samples: this.encodedAudioChunks.length, audio: { sample_rate: 48000, channel_count: 2, sample_size: 16 } });
+      const aId = mux.addTrack({
+        type: 'audio', timescale: ats, nb_samples: this.encodedAudioChunks.length,
+        audio: { sample_rate: 48000, channel_count: 2, sample_size: 16 },
+      });
       for (const c of this.encodedAudioChunks) {
-        mux.addSample(aId, c.data, { duration: Math.round((c.duration / 1_000_000) * ats), dts: Math.round((c.timestamp / 1_000_000) * ats), cts: Math.round((c.timestamp / 1_000_000) * ats), is_sync: true });
+        mux.addSample(aId, c.data, {
+          duration: Math.round((c.duration / 1_000_000) * ats),
+          dts: Math.round((c.timestamp / 1_000_000) * ats),
+          cts: Math.round((c.timestamp / 1_000_000) * ats),
+          is_sync: true,
+        });
       }
     }
 
     return new Promise((res, rej) => {
-      mux.saveData = (data) => { const b = new Blob([data], { type: 'video/mp4' }); if (b.size === 0) rej(new Error('封装输出为空')); else res(b); };
+      mux.saveData = (data) => {
+        const blob = new Blob([data], { type: 'video/mp4' });
+        if (blob.size === 0) rej(new Error('封装输出为空'));
+        else res(blob);
+      };
       try { mux.save('file.mp4'); } catch (e) { rej(e); }
     });
   }
@@ -887,7 +892,9 @@ class CompressionEngine {
 
   abort() {
     this.aborted = true;
-    try { this.videoDecoder?.close(); } catch {} try { this.videoEncoder?.close(); } catch {} try { this.audioEncoder?.close(); } catch {}
+    try { this.videoEncoder?.close(); } catch {}
+    try { this.audioEncoder?.close(); } catch {}
+    try { this.videoEl?.pause(); } catch {}
   }
 }
 
