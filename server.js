@@ -36,7 +36,7 @@ if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
 if (ffprobePath) ffmpeg.setFfprobePath(ffprobePath);
 
 const app = express();
-const PORT = 3000;
+const PORT = 3001;
 
 // Middleware
 app.use(cors());
@@ -75,6 +75,12 @@ const sseClients = new Map();
 
 // ===================== API ROUTES =====================
 
+// Catch-all for missing static files
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) return next();
+  res.status(404).json({ error: 'Not found' });
+});
+
 // Upload video file
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
@@ -92,6 +98,43 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
   });
   res.json({ id, filename: req.file.originalname, size: req.file.size });
 });
+
+// Get available encoders
+app.get('/api/encoders', (req, res) => {
+  const { execFile } = require('child_process');
+  const ffmpegBin = ffmpegPath || 'ffmpeg';
+  execFile(ffmpegBin, ['-encoders'], { timeout: 10000 }, (err, stdout) => {
+    if (err) return res.json({ encoders: defaultEncoderList() });
+    const lines = stdout.split('\n');
+    const encoders = [];
+    // Parse: " V..... libx264      libx264 H.264 / AVC / MPEG-4 AVC ..."
+    for (const line of lines) {
+      const m = line.match(/^\s*[VAS.]+?\s+(\S+)\s+(.+)/);
+      if (m) {
+        const name = m[1], desc = m[2].split('(')[0].trim();
+        encoders.push({ name, desc });
+      }
+    }
+    // Filter to our supported list
+    const wanted = ['libx264', 'libx265', 'h264_nvenc', 'h264_amf', 'h264_qsv',
+      'hevc_nvenc', 'hevc_amf', 'libvpx-vp9', 'libvpx', 'mpeg4'];
+    const available = encoders.filter(e => wanted.includes(e.name))
+      .map(e => ({ value: e.name, label: e.name + ' (' + e.desc + ')' }));
+    if (available.length === 0) {
+      // Fallback: return what we found
+      available.push(...encoders.slice(0, 10).map(e => ({ value: e.name, label: e.name })));
+    }
+    res.json({ encoders: available });
+  });
+});
+
+function defaultEncoderList() {
+  return [
+    { value: 'libx264', label: 'libx264 (H.264)' },
+    { value: 'h264_nvenc', label: 'h264_nvenc (NVIDIA GPU)' },
+    { value: 'mpeg4', label: 'mpeg4 (basic)' },
+  ];
+}
 
 // Get video metadata via ffprobe
 app.get('/api/info/:id', (req, res) => {
@@ -142,11 +185,21 @@ app.post('/api/compress/:id', (req, res) => {
   // Build FFmpeg command
   const cmd = ffmpeg(job.inputPath);
 
-  // Video codec
-  const codec = opts.codec || 'libx264';
-  cmd.videoCodec(codec.includes('h264') || codec.includes('avc') ? 'libx264' :
-                  codec.includes('h265') || codec.includes('hevc') || codec.includes('hvc') ? 'libx265' :
-                  codec.includes('vp9') ? 'libvpx-vp9' : 'libx264');
+  // Video codec — use directly if it's a valid ffmpeg encoder name,
+  // otherwise map common aliases to the correct ffmpeg encoder
+  let codec = opts.codec || 'libx264';
+  // Map known ffmpeg encoder names (pass through as-is)
+  const knownEncoders = ['libx264', 'libx265', 'libvpx-vp9', 'libvpx',
+    'h264_nvenc', 'h264_amf', 'h264_qsv', 'hevc_nvenc', 'hevc_amf',
+    'mpeg4', 'libvorbis', 'libopus', 'aac'];
+  // If it's not a known encoder name, try to map it
+  if (!knownEncoders.includes(codec)) {
+    if (codec.includes('h264') || codec.includes('avc')) codec = 'libx264';
+    else if (codec.includes('h265') || codec.includes('hevc') || codec.includes('hvc')) codec = 'libx265';
+    else if (codec.includes('vp9')) codec = 'libvpx-vp9';
+    else codec = 'libx264'; // fallback
+  }
+  cmd.videoCodec(codec);
 
   // Resolution
   if (opts.width && opts.height) cmd.size(`${opts.width}x${opts.height}`);
