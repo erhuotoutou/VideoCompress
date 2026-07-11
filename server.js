@@ -3,8 +3,9 @@ const multer = require('multer');
 const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
 const fs = require('fs');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const cors = require('cors');
+const uuidv4 = () => crypto.randomUUID();
 
 // ---- FFmpeg path resolution ----
 // Priority: env var > ./bin/ > system PATH
