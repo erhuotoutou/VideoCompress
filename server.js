@@ -116,8 +116,9 @@ app.get('/api/encoders', (req, res) => {
       }
     }
     // Filter to our supported list
-    const wanted = ['libx264', 'libx265', 'h264_nvenc', 'h264_amf', 'h264_qsv',
-      'hevc_nvenc', 'hevc_amf', 'libvpx-vp9', 'libvpx', 'mpeg4'];
+    const wanted = ['libopenh264', 'libx264', 'libx265', 'h264_nvenc', 'h264_amf',
+      'h264_qsv', 'h264_mf', 'h264_vaapi', 'h264_vulkan', 'hevc_nvenc',
+      'hevc_amf', 'hevc_vaapi', 'libvpx-vp9', 'libvpx', 'mpeg4'];
     const available = encoders.filter(e => wanted.includes(e.name))
       .map(e => ({ value: e.name, label: e.name + ' (' + e.desc + ')' }));
     if (available.length === 0) {
@@ -130,8 +131,9 @@ app.get('/api/encoders', (req, res) => {
 
 function defaultEncoderList() {
   return [
-    { value: 'libx264', label: 'libx264 (H.264)' },
+    { value: 'libopenh264', label: 'libopenh264 (H.264)' },
     { value: 'h264_nvenc', label: 'h264_nvenc (NVIDIA GPU)' },
+    { value: 'h264_mf', label: 'h264_mf (Windows)' },
     { value: 'mpeg4', label: 'mpeg4 (basic)' },
   ];
 }
@@ -189,15 +191,16 @@ app.post('/api/compress/:id', (req, res) => {
   // otherwise map common aliases to the correct ffmpeg encoder
   let codec = opts.codec || 'libx264';
   // Map known ffmpeg encoder names (pass through as-is)
-  const knownEncoders = ['libx264', 'libx265', 'libvpx-vp9', 'libvpx',
-    'h264_nvenc', 'h264_amf', 'h264_qsv', 'hevc_nvenc', 'hevc_amf',
-    'mpeg4', 'libvorbis', 'libopus', 'aac'];
+  const knownEncoders = ['libx264', 'libx265', 'libopenh264',
+    'libvpx-vp9', 'libvpx', 'h264_nvenc', 'h264_amf', 'h264_qsv',
+    'h264_mf', 'h264_vaapi', 'h264_vulkan', 'hevc_nvenc', 'hevc_amf',
+    'hevc_vaapi', 'mpeg4', 'libvorbis', 'libopus', 'aac'];
   // If it's not a known encoder name, try to map it
   if (!knownEncoders.includes(codec)) {
-    if (codec.includes('h264') || codec.includes('avc')) codec = 'libx264';
-    else if (codec.includes('h265') || codec.includes('hevc') || codec.includes('hvc')) codec = 'libx265';
+    if (codec.includes('h264') || codec.includes('avc')) codec = 'libopenh264';
+    else if (codec.includes('h265') || codec.includes('hevc')) codec = 'hevc_nvenc';
     else if (codec.includes('vp9')) codec = 'libvpx-vp9';
-    else codec = 'libx264'; // fallback
+    else codec = 'libopenh264'; // fallback (works on all systems)
   }
   cmd.videoCodec(codec);
 
