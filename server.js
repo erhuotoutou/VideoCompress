@@ -221,40 +221,43 @@ app.post('/api/compress/:id', (req, res) => {
     else if (codec.includes('vp9')) codec = 'libvpx-vp9';
     else codec = 'libopenh264'; // fallback (works on all systems)
   }
+  // Set codec via fluent-ffmpeg
   cmd.videoCodec(codec);
 
+  // Build raw args for everything else
+  const args = [];
+
   // Resolution
-  if (opts.width && opts.height) cmd.size(`${opts.width}x${opts.height}`);
-  else if (opts.width) cmd.size(`${opts.width}x?`);
-  else if (opts.height) cmd.size(`?x${opts.height}`);
+  if (opts.width && opts.height) args.push('-s', `${opts.width}x${opts.height}`);
+  else if (opts.width) args.push('-s', `${opts.width}x?`);
+  else if (opts.height) args.push('-s', `?x${opts.height}`);
 
   // Framerate
-  if (opts.fps && !opts.keepOriginalFps) cmd.fps(opts.fps);
+  if (opts.fps && !opts.keepOriginalFps) args.push('-r', String(opts.fps));
 
   // Bitrate
-  if (opts.videoBitrate) cmd.videoBitrate(Math.round(opts.videoBitrate / 1000) + 'k');
+  if (opts.videoBitrate) args.push('-b:v', Math.round(opts.videoBitrate / 1000) + 'k');
 
   // Audio
   if (opts.audioBitrate && opts.audioBitrate > 0) {
-    cmd.audioCodec('aac').audioBitrate(Math.round(opts.audioBitrate / 1000) + 'k');
+    args.push('-c:a', 'aac', '-b:a', Math.round(opts.audioBitrate / 1000) + 'k');
   } else {
-    cmd.noAudio();
+    args.push('-an');
   }
 
-  // Bitrate mode
-  if (opts.bitrateMode === 'cbr') {
-    cmd.outputOptions(['-nal-hrd cbr']);
-  }
+  // Safe universal options
+  args.push('-pix_fmt', 'yuv420p', '-movflags', '+faststart');
 
-  // Minimal safe options — avoid encoder-specific params that may cause EINVAL
-  cmd.outputOptions(['-pix_fmt', 'yuv420p']);
-  // faststart only for mp4-compatible outputs
-  cmd.outputOptions(['-movflags', '+faststart']);
-
-  // Software encoders: add preset for speed
+  // Preset for software encoders
   if (codec.startsWith('libx') || codec.startsWith('libopenh') || codec.startsWith('libvpx')) {
-    cmd.outputOptions(['-preset', 'fast']);
+    args.push('-preset', 'fast');
   }
+
+  // Explicit overwrite
+  args.push('-y', job.outputPath);
+
+  // Apply all args at once
+  cmd.outputOptions(args);
 
   // Ensure output dir exists
   const outDir = path.dirname(job.outputPath);
