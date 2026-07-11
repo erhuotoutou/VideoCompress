@@ -262,9 +262,10 @@ app.post('/api/compress/:id', (req, res) => {
 
   cmd.output(job.outputPath);
 
-  // Log the command for debugging
-  const cmdArgs = cmd._getArguments();
-  console.log('FFmpeg command:', ffmpegPath || 'ffmpeg', cmdArgs.join(' '));
+  // Log the command
+  cmd.on('start', (cmdLine) => {
+    console.log('FFmpeg:', cmdLine);
+  });
 
   // Track progress
   let lastProgress = 0;
@@ -290,6 +291,9 @@ app.post('/api/compress/:id', (req, res) => {
 
   cmd.on('error', (err) => {
     console.error('FFmpeg error:', err.message);
+    console.error('  Input:', job.inputPath, fs.existsSync(job.inputPath) ? '(exists)' : '(MISSING)');
+    console.error('  Output:', job.outputPath);
+    console.error('  Output dir:', path.dirname(job.outputPath), fs.existsSync(path.dirname(job.outputPath)) ? '(exists)' : '(MISSING)');
     job.status = 'failed';
     job.error = err.message;
     notifyClients(job.id, { type: 'error', message: err.message });
