@@ -137,7 +137,7 @@ app.get('/api/encoders', (req, res) => {
   proc.on('close', () => {
     const found = new Set();
     for (const line of stdout.split('\n')) {
-      const m = line.match(/^\s*[VAS.]+?\s+(\S+)\s+(.+)/);
+      const m = line.match(/^\s*[A-Z.]+?\s+(\S+)\s+(.+)/);
       if (m) found.add(m[1]);
     }
     const available = [];
