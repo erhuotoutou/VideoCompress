@@ -129,29 +129,31 @@ const ENCODER_LABELS = {
 };
 
 app.get('/api/encoders', (req, res) => {
-  const { execFile } = require('child_process');
+  const { spawn } = require('child_process');
   const ffmpegBin = ffmpegPath || 'ffmpeg';
-  execFile(ffmpegBin, ['-encoders'], { timeout: 10000 }, (err, stdout) => {
-    if (err) return res.json({ encoders: Object.entries(ENCODER_LABELS).slice(0, 5).map(([k,v]) => ({ value: k, label: v })) });
-    const lines = stdout.split('\n');
+  const proc = spawn(ffmpegBin, ['-encoders'], { timeout: 30000 });
+  let stdout = '';
+  proc.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
+  proc.on('close', () => {
     const found = new Set();
-    for (const line of lines) {
+    for (const line of stdout.split('\n')) {
       const m = line.match(/^\s*[VAS.]+?\s+(\S+)\s+(.+)/);
       if (m) found.add(m[1]);
     }
-    // Return encoders that actually exist, with friendly labels
     const available = [];
     for (const [name, label] of Object.entries(ENCODER_LABELS)) {
       if (found.has(name)) available.push({ value: name, label });
     }
     if (available.length === 0) {
-      // Fallback: any H.264-like encoder we find
       for (const name of found) {
         if (name.includes('264') || name.includes('hvc') || name.includes('265'))
           available.push({ value: name, label: name });
       }
     }
     res.json({ encoders: available });
+  });
+  proc.on('error', () => {
+    res.json({ encoders: Object.values(ENCODER_LABELS).slice(0, 3).map((label, i) => ({ value: Object.keys(ENCODER_LABELS)[i], label })) });
   });
 });
 
