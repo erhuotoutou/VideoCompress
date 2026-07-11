@@ -3,35 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>视频压缩 - GPU 加速 / Video Compressor - GPU Accelerated</title>
+<title>视频压缩 - GPU 加速 / Video Compressor</title>
 <style>
-:root {
-  --bg: #0f0f0f; --surface: #1a1a1a; --surface-2: #242424; --border: #333;
-  --text: #e0e0e0; --text-secondary: #999;
-  --accent: #3b82f6; --accent-hover: #2563eb;
-  --success: #22c55e; --warning: #f59e0b; --error: #ef4444;
-  --radius: 8px; --radius-lg: 12px;
-}
+:root{--bg:#0f0f0f;--surface:#1a1a1a;--surface-2:#242424;--border:#333;--text:#e0e0e0;--text-secondary:#999;--accent:#3b82f6;--accent-hover:#2563eb;--success:#22c55e;--warning:#f59e0b;--error:#ef4444;--radius:8px;--radius-lg:12px}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
 .app-container{max-width:1400px;margin:0 auto;padding:24px}
 .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);gap:12px}
-.header h1{font-size:24px;font-weight:700}
-.header-right{display:flex;align-items:center;gap:12px}
+.header h1{font-size:24px;font-weight:700}.header-right{display:flex;align-items:center;gap:12px}
 .browser-status{font-size:13px;padding:4px 12px;border-radius:20px;background:var(--surface-2);white-space:nowrap}
 .browser-status.supported{color:var(--success)}.browser-status.unsupported{color:var(--error)}
 .lang-btn{font-size:12px;padding:4px 10px;border-radius:20px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;white-space:nowrap;transition:all 0.15s}
 .lang-btn:hover{color:var(--text);border-color:var(--accent)}
 .compat-banner{padding:12px 16px;margin-bottom:16px;border-radius:var(--radius);font-size:14px;font-weight:500}
-.compat-banner.error{background:#3b1111;color:#fca5a5;border:1px solid #7f1d1d}
-.compat-banner.warning{background:#2d1f00;color:#fcd34d;border:1px solid #78350f}
+.compat-banner.error{background:#3b1111;color:#fca5a5;border:1px solid #7f1d1d}.compat-banner.warning{background:#2d1f00;color:#fcd34d;border:1px solid #78350f}
 .hidden{display:none!important}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:none;border-radius:var(--radius);font-size:14px;font-weight:500;cursor:pointer;transition:all 0.15s}
 .btn--primary{background:var(--accent);color:#fff}.btn--primary:hover{background:var(--accent-hover)}.btn--primary:disabled{background:var(--border);color:var(--text-secondary);cursor:not-allowed}
 .btn--ghost{background:transparent;color:var(--text);border:1px solid var(--border)}.btn--ghost:hover{background:var(--surface-2)}
 .btn--danger{background:transparent;color:var(--error);border:1px solid var(--error)}.btn--danger:hover{background:#3b1111}
-.btn--small{padding:4px 10px;font-size:12px}
-.btn--icon{padding:6px;background:transparent;border:none;color:var(--text-secondary);cursor:pointer;border-radius:var(--radius)}.btn--icon:hover{color:var(--text);background:var(--surface-2)}
+.btn--small{padding:4px 10px;font-size:12px}.btn--icon{padding:6px;background:transparent;border:none;color:var(--text-secondary);cursor:pointer;border-radius:var(--radius)}.btn--icon:hover{color:var(--text);background:var(--surface-2)}
 .drop-zone{border:2px dashed var(--border);border-radius:var(--radius-lg);padding:48px;text-align:center;transition:all 0.2s;margin-bottom:24px}
 .drop-zone.active{border-color:var(--accent);background:rgba(59,130,246,0.08)}.drop-zone__icon{font-size:48px;display:block;margin-bottom:12px}.drop-zone p{margin-bottom:8px}.drop-zone__hint{font-size:13px;color:var(--text-secondary);margin-bottom:16px}
 .queue-section{margin-bottom:24px}.queue-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.queue-header h2{font-size:18px}.queue-actions{display:flex;gap:8px}
@@ -43,8 +34,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .queue-item__progress{grid-column:1/-1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:4px}
 .queue-item__progress-bar{height:100%;background:var(--accent);transition:width 0.3s;width:0%}
 .queue-item__progress-bar.completed{background:var(--success)}.queue-item__progress-bar.failed{background:var(--error)}
-.queue-item__actions{display:flex;gap:6px;align-items:center}
-.queue-item__status{font-size:12px;padding:2px 8px;border-radius:12px;white-space:nowrap}
+.queue-item__actions{display:flex;gap:6px;align-items:center}.queue-item__status{font-size:12px;padding:2px 8px;border-radius:12px;white-space:nowrap}
 .status-pending{color:var(--text-secondary);background:var(--surface-2)}.status-processing{color:var(--accent);background:rgba(59,130,246,0.15)}.status-completed{color:var(--success);background:rgba(34,197,94,0.15)}.status-failed{color:var(--error);background:rgba(239,68,68,0.15)}
 .main-content{display:grid;grid-template-columns:340px 1fr;gap:24px;align-items:start}
 @media(max-width:1100px){.main-content{grid-template-columns:1fr}}
@@ -81,204 +71,50 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </head>
 <body>
 <div class="app-container">
-  <header class="header">
-    <h1 id="appTitle">🎬 视频压缩</h1>
-    <div class="header-right">
-      <span class="browser-status" id="browserStatus">检测中...</span>
-      <button class="lang-btn" id="langToggle" title="Switch Language">EN</button>
-    </div>
-  </header>
-  <div id="compatBanner" class="compat-banner hidden"></div>
-  <div id="dropZone" class="drop-zone">
-    <div class="drop-zone__content">
-      <span class="drop-zone__icon">📁</span>
-      <p id="dropTitle">拖拽视频文件到这里</p>
-      <p class="drop-zone__hint" id="dropHint">支持 MP4 / WebM / MKV / MOV | Chrome/Edge 推荐 (GPU 加速)</p>
-      <button id="fileSelectBtn" class="btn btn--primary" data-i18n="selectFile">选择文件</button>
-      <input type="file" id="fileInput" hidden multiple accept=".mp4,.webm,.mkv,.mov,.avi">
-    </div>
-  </div>
-  <section id="queueSection" class="queue-section hidden">
-    <div class="queue-header">
-      <h2><span data-i18n="queue">队列</span> (<span id="queueCount">0</span>)</h2>
-      <div class="queue-actions">
-        <button id="startAllBtn" class="btn btn--primary" data-i18n="startAll">全部开始</button>
-        <button id="clearQueueBtn" class="btn btn--ghost" data-i18n="clearDone">清空已完成</button>
-      </div>
-    </div>
-    <div id="queueList" class="queue-list"></div>
-  </section>
-  <div id="mainContent" class="main-content hidden">
-    <aside id="paramPanel" class="param-panel">
-      <p class="preview-area__empty"><span>📋</span><span data-i18n="selectFilePrompt">选择一个文件以设置参数</span></p>
-    </aside>
-    <section id="previewArea" class="preview-area">
-      <div class="preview-area__empty"><span>🎥</span><p data-i18n="selectFilePreview">选择一个文件以预览</p></div>
-    </section>
-  </div>
-  <div id="compareModal" class="modal hidden">
-    <div class="modal__backdrop"></div>
-    <div class="modal__content">
-      <button class="modal__close" id="closeCompare">&times;</button>
-      <div id="compareContent"></div>
-    </div>
-  </div>
+<header class="header"><h1 id="appTitle">🎬 视频压缩</h1><div class="header-right"><span class="browser-status" id="browserStatus">检测中...</span><button class="lang-btn" id="langToggle" title="Switch Language">EN</button></div></header>
+<div id="compatBanner" class="compat-banner hidden"></div>
+<div id="dropZone" class="drop-zone"><div class="drop-zone__content"><span class="drop-zone__icon">📁</span><p id="dropTitle">拖拽视频文件到这里</p><p class="drop-zone__hint" id="dropHint">支持 MP4 / WebM / MKV / MOV | Chrome/Edge 推荐 (GPU 加速)</p><button id="fileSelectBtn" class="btn btn--primary" data-i18n="selectFile">选择文件</button><input type="file" id="fileInput" hidden multiple accept=".mp4,.webm,.mkv,.mov,.avi"></div></div>
+<section id="queueSection" class="queue-section hidden"><div class="queue-header"><h2><span data-i18n="queue">队列</span> (<span id="queueCount">0</span>)</h2><div class="queue-actions"><button id="startAllBtn" class="btn btn--primary" data-i18n="startAll">全部开始</button><button id="clearQueueBtn" class="btn btn--ghost" data-i18n="clearDone">清空已完成</button></div></div><div id="queueList" class="queue-list"></div></section>
+<div id="mainContent" class="main-content hidden"><aside id="paramPanel" class="param-panel"><p class="preview-area__empty"><span>📋</span><span data-i18n="selectFilePrompt">选择一个文件以设置参数</span></p></aside><section id="previewArea" class="preview-area"><div class="preview-area__empty"><span>🎥</span><p data-i18n="selectFilePreview">选择一个文件以预览</p></div></section></div>
+<div id="compareModal" class="modal hidden"><div class="modal__backdrop"></div><div class="modal__content"><button class="modal__close" id="closeCompare">&times;</button><div id="compareContent"></div></div></div>
 </div>
 <div class="log-panel" id="logPanel"></div>
 
 <script src="mp4box.all.js"></script>
 <script>
-// =============================================
-// I18N
-// =============================================
-const I18N = {
-  zh: {
-    title:'🎬 视频压缩', checking:'检测中...', chromeOK:'Chrome ✅', gpuEnc:'个 GPU 编码器可用', softEnc:'软编码模式', noWebCodecs:'⚠️ 不支持 WebCodecs',
-    dropTitle:'拖拽视频文件到这里', dropHint:'支持 MP4 / WebM / MKV / MOV | Chrome/Edge 推荐 (GPU 加速)',
-    selectFile:'选择文件', queue:'队列', startAll:'全部开始', clearDone:'清空已完成',
-    selectFilePrompt:'选择一个文件以设置参数', selectFilePreview:'选择一个文件以预览',
-    analyzing:'正在分析...', waiting:'等待中', completed:'✅ 完成', failed:'❌ 失败',
-    start:'开始', cancel:'取消', download:'下载', compare:'对比', retry:'重试', remove:'移除',
-    targetRes:'目标分辨率', originalSize:'原尺寸', custom:'自定义',
-    videoCodec:'视频编码器', unavailable:'不可用',
-    bitrateMode:'码率模式', vbr:'VBR（质量优先）', cbr:'CBR（精确控制）',
-    videoBitrate:'视频码率', fps:'帧率', keepOrigFps:'保持原帧率',
-    audioBitrate:'音频比特率', noAudio:'无音频轨道',
-    applyAll:'📋 应用到全部待处理文件', estSize:'预估大小', approx:'约', savePct:'预计节省', space:'空间',
-    origInfo:'原始', target:'目标', original:'原始', compressed:'压缩后',
-    origSize:'原始大小', compSize:'压缩后大小', saved:'节省', increased:'增大', ratio:'压缩比',
-    sliderCompare:'滑块对比 (拖动白色竖线)',
-    notSupportedFormat:'不是支持的视频格式', tooLarge:'文件过大（超过 4GB）', alreadyInQueue:'已在队列中',
-    waitAnalysis:'请等待文件分析完成', compressDone:'压缩完成', compressFailed:'压缩失败',
-    noPending:'没有待处理的文件', processing:'已有文件正在处理中',
-    appliedAll:'参数已应用到全部待处理文件', memoryWarning0:'处理可能需要约',
-    memoryWarning1:'MB 内存，可能卡顿。\n建议降低分辨率。\n\n是否继续？',
-    unsupportedBrowser:'当前浏览器不支持 WebCodecs API。请使用 Chrome 94+ 或 Edge 94+。',
-    leaving:'有正在压缩的文件，确定要离开吗？',
-    ready:'就绪',
-    decodeError:'解码失败，未生成视频帧（可能是编码格式不支持）',
-    encodeError:'编码失败，未生成输出数据',
-  },
-  en: {
-    title:'🎬 Video Compressor', checking:'Detecting...', chromeOK:'Chrome ✅', gpuEnc:'GPU encoders available', softEnc:'Software mode', noWebCodecs:'⚠️ WebCodecs not supported',
-    dropTitle:'Drop video files here', dropHint:'Supports MP4 / WebM / MKV / MOV | Chrome/Edge recommended (GPU)',
-    selectFile:'Select Files', queue:'Queue', startAll:'Start All', clearDone:'Clear Done',
-    selectFilePrompt:'Select a file to configure', selectFilePreview:'Select a file to preview',
-    analyzing:'Analyzing...', waiting:'Waiting', completed:'✅ Done', failed:'❌ Failed',
-    start:'Start', cancel:'Cancel', download:'Download', compare:'Compare', retry:'Retry', remove:'Remove',
-    targetRes:'Target Resolution', originalSize:'Original', custom:'Custom',
-    videoCodec:'Video Codec', unavailable:'unavailable',
-    bitrateMode:'Bitrate Mode', vbr:'VBR (Quality)', cbr:'CBR (Precise)',
-    videoBitrate:'Video Bitrate', fps:'Frame Rate', keepOrigFps:'Keep Original',
-    audioBitrate:'Audio Bitrate', noAudio:'No audio track',
-    applyAll:'📋 Apply to All Pending', estSize:'Estimated Size', approx:'approx.', savePct:'Est. Savings', space:'space',
-    origInfo:'Original', target:'Target', original:'Original', compressed:'Compressed',
-    origSize:'Original Size', compSize:'Compressed Size', saved:'Saved', increased:'Increase', ratio:'Ratio',
-    sliderCompare:'Slider Compare (drag white line)',
-    notSupportedFormat:'is not a supported video format', tooLarge:'exceeds 4GB limit', alreadyInQueue:'is already in the queue',
-    waitAnalysis:'Please wait for file analysis to complete', compressDone:'Compression complete', compressFailed:'Compression failed',
-    noPending:'No pending files', processing:'A file is already being processed',
-    appliedAll:'Settings applied to all pending files', memoryWarning0:'Processing may require ~',
-    memoryWarning1:'MB of memory and could cause lag.\nConsider lowering resolution.\n\nContinue?',
-    unsupportedBrowser:'Your browser does not support WebCodecs API. Please use Chrome 94+ or Edge 94+.',
-    leaving:'Files are being processed. Are you sure you want to leave?',
-    ready:'Ready',
-    decodeError:'Decode failed: no video frames produced (codec may be unsupported)',
-    encodeError:'Encode failed: no output data generated',
-  }
-};
+// ============================================= I18N =============================================
+const I18N={zh:{title:'🎬 视频压缩',checking:'检测中...',chromeOK:'Chrome ✅',gpuEnc:'个 GPU 编码器可用',softEnc:'软编码模式',noWebCodecs:'⚠️ 不支持 WebCodecs',dropTitle:'拖拽视频文件到这里',dropHint:'支持 MP4 / WebM / MKV / MOV | Chrome/Edge 推荐 (GPU 加速)',selectFile:'选择文件',queue:'队列',startAll:'全部开始',clearDone:'清空已完成',selectFilePrompt:'选择一个文件以设置参数',selectFilePreview:'选择一个文件以预览',analyzing:'正在分析...',waiting:'等待中',completed:'✅ 完成',failed:'❌ 失败',start:'开始',cancel:'取消',download:'下载',compare:'对比',retry:'重试',remove:'移除',targetRes:'目标分辨率',originalSize:'原尺寸',custom:'自定义',videoCodec:'视频编码器',unavailable:'不可用',bitrateMode:'码率模式',vbr:'VBR（质量优先）',cbr:'CBR（精确控制）',videoBitrate:'视频码率',fps:'帧率',keepOrigFps:'保持原帧率',audioBitrate:'音频比特率',noAudio:'无音频轨道',applyAll:'📋 应用到全部待处理文件',estSize:'预估大小',approx:'约',savePct:'预计节省',space:'空间',origInfo:'原始',target:'目标',original:'原始',compressed:'压缩后',origSize:'原始大小',compSize:'压缩后大小',saved:'节省',increased:'增大',ratio:'压缩比',sliderCompare:'滑块对比 (拖动白色竖线)',notSupportedFormat:'不是支持的视频格式',tooLarge:'文件过大（超过 4GB）',alreadyInQueue:'已在队列中',waitAnalysis:'请等待文件分析完成',compressDone:'压缩完成',compressFailed:'压缩失败',noPending:'没有待处理的文件',processing:'已有文件正在处理中',appliedAll:'参数已应用到全部待处理文件',memoryWarning0:'处理可能需要约',memoryWarning1:'MB 内存，可能卡顿。\n建议降低分辨率。\n\n是否继续？',unsupportedBrowser:'当前浏览器不支持 WebCodecs API。请使用 Chrome 94+ 或 Edge 94+。',leaving:'有正在压缩的文件，确定要离开吗？',ready:'就绪',decodeError:'解码失败，未生成视频帧（可能是编码格式不支持）',unsupported:'不支持此分辨率/编码组合。请尝试降低分辨率或切换到 H.264。',emptyOutput:'输出文件为空。可能是编码器不支持此分辨率。请尝试降低分辨率。'},en:{title:'🎬 Video Compressor',checking:'Detecting...',chromeOK:'Chrome ✅',gpuEnc:'GPU encoders available',softEnc:'Software mode',noWebCodecs:'⚠️ WebCodecs not supported',dropTitle:'Drop video files here',dropHint:'Supports MP4 / WebM / MKV / MOV | Chrome/Edge recommended (GPU)',selectFile:'Select Files',queue:'Queue',startAll:'Start All',clearDone:'Clear Done',selectFilePrompt:'Select a file to configure',selectFilePreview:'Select a file to preview',analyzing:'Analyzing...',waiting:'Waiting',completed:'✅ Done',failed:'❌ Failed',start:'Start',cancel:'Cancel',download:'Download',compare:'Compare',retry:'Retry',remove:'Remove',targetRes:'Target Resolution',originalSize:'Original',custom:'Custom',videoCodec:'Video Codec',unavailable:'unavailable',bitrateMode:'Bitrate Mode',vbr:'VBR (Quality)',cbr:'CBR (Precise)',videoBitrate:'Video Bitrate',fps:'Frame Rate',keepOrigFps:'Keep Original',audioBitrate:'Audio Bitrate',noAudio:'No audio track',applyAll:'📋 Apply to All Pending',estSize:'Estimated Size',approx:'approx.',savePct:'Est. Savings',space:'space',origInfo:'Original',target:'Target',original:'Original',compressed:'Compressed',origSize:'Original Size',compSize:'Compressed Size',saved:'Saved',increased:'Increase',ratio:'Ratio',sliderCompare:'Slider Compare (drag white line)',notSupportedFormat:'is not a supported video format',tooLarge:'exceeds 4GB limit',alreadyInQueue:'is already in the queue',waitAnalysis:'Please wait for file analysis to complete',compressDone:'Compression complete',compressFailed:'Compression failed',noPending:'No pending files',processing:'A file is already being processed',appliedAll:'Settings applied to all pending files',memoryWarning0:'Processing may require ~',memoryWarning1:'MB of memory and could cause lag.\nConsider lowering resolution.\n\nContinue?',unsupportedBrowser:'Your browser does not support WebCodecs API. Please use Chrome 94+ or Edge 94+.',leaving:'Files are being processed. Are you sure you want to leave?',ready:'Ready',decodeError:'Decode failed: no video frames produced (codec may be unsupported)',unsupported:'Unsupported resolution/codec combo. Try lowering resolution or switching to H.264.',emptyOutput:'Output file empty. Encoder may not support this resolution. Try lowering resolution.'}};
+let LANG=localStorage.getItem('vcompress-lang')||'zh';
+function t(key){return(I18N[LANG]||I18N.zh)[key]||I18N.zh[key]||key;}
+function setLang(lang){LANG=lang;localStorage.setItem('vcompress-lang',lang);refreshI18n();}
+function refreshI18n(){document.getElementById('langToggle').textContent=LANG==='zh'?'EN':'中文';document.getElementById('appTitle').textContent=t('title');document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n);});document.getElementById('dropTitle').textContent=t('dropTitle');document.getElementById('dropHint').textContent=t('dropHint');const task=getSelectedTask();renderQueue();if(task){renderParamPanel(task);renderPreview(task);}}
 
-let LANG = localStorage.getItem('vcompress-lang') || 'zh';
-function t(key){ return (I18N[LANG]||I18N.zh)[key] || I18N.zh[key] || key; }
-function setLang(lang){ LANG=lang; localStorage.setItem('vcompress-lang',lang); refreshI18n(); }
-function refreshI18n(){
-  document.getElementById('langToggle').textContent = LANG==='zh'?'EN':'中文';
-  document.getElementById('appTitle').textContent = t('title');
-  document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n);});
-  document.getElementById('dropTitle').textContent=t('dropTitle');
-  document.getElementById('dropHint').textContent=t('dropHint');
-  const task = getSelectedTask();
-  renderQueue();
-  if(task) { renderParamPanel(task); renderPreview(task); }
-}
+// ============================================= STATE & UTILS =============================================
+const appState={queue:[],selectedId:null,processingCount:0};let compatibilityResult=null;
+const MAX_FILE_SIZE=4*1024*1024*1024,SUPPORTED_EXTENSIONS=['.mp4','.webm','.mkv','.mov','.avi'];
+const toastContainer=document.createElement('div');toastContainer.className='toast-container';document.body.appendChild(toastContainer);
+function generateId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
+function formatSize(bytes){if(!bytes&&bytes!==0)return'--';if(bytes>=1e9)return(bytes/1e9).toFixed(2)+' GB';if(bytes>=1e6)return(bytes/1e6).toFixed(1)+' MB';if(bytes>=1e3)return(bytes/1e3).toFixed(0)+' KB';return bytes+' B';}
+function formatDuration(sec){if(!sec)return'--';const m=Math.floor(sec/60),s=Math.floor(sec%60);return m+'m'+s.toString().padStart(2,'0')+'s';}
+function formatBitrate(bps){if(!bps&&bps!==0)return'--';if(bps>=1e6)return(bps/1e6).toFixed(1)+' Mbps';if(bps>=1e3)return(bps/1e3).toFixed(0)+' Kbps';return bps+' bps';}
+function escapeHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function showToast(msg,type='info',dur=3000){const t=document.createElement('div');t.className='toast toast--'+type;t.textContent=msg;toastContainer.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity 0.3s';setTimeout(()=>t.remove(),300);},dur);}
+function log(msg,isErr=false){console.log('[VC]',msg);const p=document.getElementById('logPanel');p.classList.add('visible');const l=document.createElement('div');l.className='log-line'+(isErr?' log-error':'');l.textContent=new Date().toLocaleTimeString()+' '+msg;p.appendChild(l);if(p.children.length>50)p.firstChild.remove();}
 
-// =============================================
-// STATE & UTILITIES
-// =============================================
-const appState = { queue:[], selectedId:null, processingCount:0 };
-let compatibilityResult = null;
-const MAX_FILE_SIZE = 4*1024*1024*1024;
-const SUPPORTED_EXTENSIONS = ['.mp4','.webm','.mkv','.mov','.avi'];
-const toastContainer = document.createElement('div');
-toastContainer.className='toast-container'; document.body.appendChild(toastContainer);
-function generateId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
-function formatSize(bytes){ if(!bytes&&bytes!==0)return'--';if(bytes>=1e9)return(bytes/1e9).toFixed(2)+' GB';if(bytes>=1e6)return(bytes/1e6).toFixed(1)+' MB';if(bytes>=1e3)return(bytes/1e3).toFixed(0)+' KB';return bytes+' B'; }
-function formatDuration(sec){ if(!sec)return'--';const m=Math.floor(sec/60),s=Math.floor(sec%60);return m+'m'+s.toString().padStart(2,'0')+'s'; }
-function formatBitrate(bps){ if(!bps&&bps!==0)return'--';if(bps>=1e6)return(bps/1e6).toFixed(1)+' Mbps';if(bps>=1e3)return(bps/1e3).toFixed(0)+' Kbps';return bps+' bps'; }
-function escapeHtml(s){ const d=document.createElement('div');d.textContent=s;return d.innerHTML; }
-function showToast(msg,type='info',dur=3000){ const t=document.createElement('div');t.className='toast toast--'+type;t.textContent=msg;toastContainer.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity 0.3s';setTimeout(()=>t.remove(),300);},dur); }
-function log(msg,isErr=false){ console.log('[VC]',msg);const p=document.getElementById('logPanel');p.classList.add('visible');const l=document.createElement('div');l.className='log-line'+(isErr?' log-error':'');l.textContent=new Date().toLocaleTimeString()+' '+msg;p.appendChild(l);if(p.children.length>50)p.firstChild.remove(); }
-function annexBToAVCC(buffer){ const d=new Uint8Array(buffer),nals=[];let s=0;for(let i=0;i<d.length-2;i++){const is3=d[i]===0&&d[i+1]===0&&d[i+2]===1;const is4=i+3<d.length&&d[i]===0&&d[i+1]===0&&d[i+2]===0&&d[i+3]===1;if(is3||is4){if(s<i)nals.push(d.subarray(s,i));s=is4?i+4:i+3;i=s-1;}}if(s<d.length)nals.push(d.subarray(s));if(nals.length===0)return buffer;const total=nals.reduce((a,n)=>a+4+n.length,0);const avcc=new Uint8Array(total);let p=0;for(const n of nals){avcc[p]=(n.length>>24)&0xff;avcc[p+1]=(n.length>>16)&0xff;avcc[p+2]=(n.length>>8)&0xff;avcc[p+3]=n.length&0xff;avcc.set(n,p+4);p+=4+n.length;}return avcc.buffer; }
-
-// Pick appropriate codec level based on target resolution
-function pickCodecForResolution(codec, w, h) {
-  const pixels = w * h;
-  const isHevc = codec.includes('hvc') || codec.includes('hev');
-  const isAv1 = codec.includes('av01');
-
-  // H.265: hvc1.1.6.L{level}.90 → bump level for resolution
-  if (isHevc) {
-    if (pixels <= 1920*1080) return 'hvc1.1.6.L93.90';    // Level 4
-    if (pixels <= 3840*2160) return 'hvc1.1.6.L120.90';   // Level 5
-    if (pixels <= 7680*4320) return 'hvc1.1.6.L150.90';   // Level 6
-    return codec; // keep original for fallback
-  }
-
-  // H.264: avc1.{profile}{compat}{level} → bump level for resolution
-  if (codec.includes('avc')) {
-    // H.264 levels: 4.2=0x2A, 5.0=0x32, 5.1=0x34, 5.2=0x36, 6.0=0x3C
-    if (pixels <= 720*480)        return 'avc1.64001E'; // High L3.0 ~1M
-    if (pixels <= 1920*1080)      return 'avc1.64002A'; // High L4.2 ~2M
-    if (pixels <= 2560*1440)      return 'avc1.640032'; // High L5.0 ~3.7M
-    if (pixels <= 3840*2160)      return 'avc1.640034'; // High L5.1 ~8.3M
-    if (pixels <= 4096*2304)      return 'avc1.640036'; // High L5.2 ~9.4M
-    return 'avc1.64003C';                               // High L6.0 ~35M
-  }
-
-  return codec; // VP9, AV1 etc. don't need level adjustment
-}
-
-// =============================================
-// COMPATIBILITY
-// =============================================
-async function checkCompat(){
-  const r={supported:false,codecs:[],warnings:[],aacSupported:false};
-  if(typeof VideoEncoder==='undefined'||typeof VideoDecoder==='undefined'){r.warnings.push(t('unsupportedBrowser'));return r;}
-  r.supported=true;
-  const cfgs=[{codec:'avc1.42001E',label:'H.264 Baseline'},{codec:'avc1.4D002A',label:'H.264 Main'},{codec:'avc1.64002A',label:'H.264 High'},{codec:'avc1.640034',label:'H.264 High 5.1 (4K)'},{codec:'hvc1.1.6.L120.90',label:'H.265/HEVC'},{codec:'vp09.00.10.08',label:'VP9'},{codec:'av01.0.04M.08',label:'AV1'}];
-  for(const c of cfgs){try{const s=await VideoEncoder.isConfigSupported({codec:c.codec,width:1920,height:1080,bitrate:5e6,framerate:30});c.supported=s.supported===true;if(s.supported){const hw=await VideoEncoder.isConfigSupported({codec:c.codec,width:1920,height:1080,bitrate:5e6,framerate:30,hardwareAcceleration:'prefer-hardware'});c.hardwareAccelerated=hw.supported===true;}}catch{c.supported=false;c.hardwareAccelerated=false;}r.codecs.push(c);}
-  if(typeof AudioEncoder!=='undefined'){try{const a=await AudioEncoder.isConfigSupported({codec:'mp4a.40.2',sampleRate:48000,numberOfChannels:2});r.aacSupported=a.supported===true;}catch{r.aacSupported=false;}}
-  return r;
-}
+// ============================================= COMPATIBILITY =============================================
+async function checkCompat(){const r={supported:false,codecs:[],warnings:[],aacSupported:false};if(typeof VideoEncoder==='undefined'){r.warnings.push(t('unsupportedBrowser'));return r;}r.supported=true;const cfgs=[{codec:'avc1.42001E',label:'H.264'},{codec:'avc1.64002A',label:'H.264 High'},{codec:'avc1.640034',label:'H.264 High 5.1 (4K)'},{codec:'hvc1.1.6.L120.90',label:'H.265/HEVC'},{codec:'vp09.00.10.08',label:'VP9'},{codec:'av01.0.04M.08',label:'AV1'}];for(const c of cfgs){try{const s=await VideoEncoder.isConfigSupported({codec:c.codec,width:1920,height:1080,bitrate:5e6,framerate:30});c.supported=s.supported===true;if(s.supported){const hw=await VideoEncoder.isConfigSupported({codec:c.codec,width:1920,height:1080,bitrate:5e6,framerate:30,hardwareAcceleration:'prefer-hardware'});c.hardwareAccelerated=hw.supported===true;}}catch{c.supported=false;c.hardwareAccelerated=false;}r.codecs.push(c);}return r;}
 function getAvailableCodecs(r){return r.codecs.filter(c=>c.supported).map(c=>({value:c.codec,label:c.label+(c.hardwareAccelerated?' (GPU)':' (CPU)'),hardware:c.hardwareAccelerated}));}
-function getCodecLabel(codec){if(!codec)return'?';const c=codec.toLowerCase();if(c.includes('avc')||c.includes('h264'))return'H.264';if(c.includes('hvc')||c.includes('hev')||c.includes('h265'))return'H.265';if(c.includes('vp9')||c.includes('vp09'))return'VP9';if(c.includes('vp8'))return'VP8';if(c.includes('av1'))return'AV1';return codec.substring(0,10);}
-function updateBrowserStatus(compat){const el=document.getElementById('browserStatus');if(compat.supported){const n=compat.codecs.filter(c=>c.hardwareAccelerated).length;el.textContent=t('chromeOK')+' | '+(n>0?n+' '+t('gpuEnc'):t('softEnc'));el.className='browser-status supported';}else{el.textContent=t('noWebCodecs');el.className='browser-status unsupported';}}
-function showCompatBanner(compat){const b=document.getElementById('compatBanner');if(!compat.supported){b.className='compat-banner error';b.textContent=compat.warnings[0];}else if(compat.warnings.length>0){b.className='compat-banner warning';b.textContent=compat.warnings.join(' ');}else{b.className='compat-banner hidden';}}
+function getCodecLabel(codec){if(!codec)return'?';const c=codec.toLowerCase();if(c.includes('avc')||c.includes('h264'))return'H.264';if(c.includes('hvc')||c.includes('hev')||c.includes('h265'))return'H.265';if(c.includes('vp9'))return'VP9';if(c.includes('vp8'))return'VP8';if(c.includes('av1'))return'AV1';return codec.substring(0,10);}
+function updateBrowserStatus(c){const el=document.getElementById('browserStatus');if(c.supported){const n=c.codecs.filter(x=>x.hardwareAccelerated).length;el.textContent=t('chromeOK')+' | '+(n>0?n+' '+t('gpuEnc'):t('softEnc'));el.className='browser-status supported';}else{el.textContent=t('noWebCodecs');el.className='browser-status unsupported';}}
+function showCompatBanner(c){const b=document.getElementById('compatBanner');if(!c.supported){b.className='compat-banner error';b.textContent=c.warnings[0];}else{b.className='compat-banner hidden';}}
 function estimateSize(options,dur){if(!options||!dur)return 0;return Math.round(((options.videoBitrate||0)+(options.audioBitrate||0))*dur/8*1.02);}
 
-// =============================================
-// MEDIA INFO (mp4box metadata only)
-// =============================================
-async function extractMediaInfo(task){
-  try{const info=await parseVideoFile(task.file);task.originalInfo=info;task.options=getDefaultOptions(info);log(task.file.name+': '+info.width+'x'+info.height+', '+info.fps+'fps, '+info.codecLabel+', '+formatDuration(info.duration));renderQueue();if(task.id===appState.selectedId)updateMainContent();}
-  catch(err){console.error(err);log('ERROR: '+task.file.name+' - '+err.message,true);task.originalInfo={width:0,height:0,duration:0,fps:0,codec:'',codecLabel:'?',videoBitrate:0,audioBitrate:0,hasAudio:false,error:err.message};task.options=getDefaultOptions(task.originalInfo);renderQueue();}
-}
-function parseVideoFile(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=(e)=>{const buf=e.target.result;const mf=MP4Box.createFile();const info={width:0,height:0,duration:0,fps:0,codec:'',codecLabel:'',videoBitrate:0,audioBitrate:0,hasAudio:false,videoTrackId:0,audioTrackId:0,trackInfo:null};let resolved=false;mf.onReady=(mi)=>{info.trackInfo=mi;if(!mi.videoTracks||mi.videoTracks.length===0){if(!resolved){resolved=true;reject(new Error('No video track'));}return;}const vt=mi.videoTracks[0];info.width=vt.track_width;info.height=vt.track_height;info.codec=vt.codec||'';info.codecLabel=getCodecLabel(vt.codec||'');info.videoTrackId=vt.id;const td=vt.samples_duration||(mi.duration/(mi.timescale||1)*(vt.timescale||1));const tts=vt.timescale||mi.timescale||1;const nb=vt.nb_samples||0;if(nb>0&&td>0)info.fps=Math.round(nb/(td/tts));info.duration=(vt.samples_duration||mi.duration)/(vt.timescale||mi.timescale||1);const ds=info.duration||1;info.videoBitrate=Math.round((file.size*0.9*8)/ds);info.audioBitrate=0;if(mi.audioTracks&&mi.audioTracks.length>0){info.hasAudio=true;info.audioTrackId=mi.audioTracks[0].id;info.audioBitrate=128000;}if(!resolved){resolved=true;resolve(info);}};mf.onError=()=>{if(!resolved){resolved=true;reject(new Error('Parse failed'));}};buf.fileStart=0;mf.appendBuffer(buf);mf.flush();setTimeout(()=>{if(!resolved){resolved=true;reject(new Error('Metadata timeout'));}},5000);};r.onerror=()=>reject(new Error('Read failed'));r.readAsArrayBuffer(file);});}
-function getDefaultOptions(info){if(!compatibilityResult)return{width:info.width||1920,height:info.height||1080,codec:'avc1.42001E',codecLabel:'H.264',videoBitrate:5e6,bitrateMode:'vbr',fps:info.fps||30,audioBitrate:128000,keepOriginalFps:true};const av=getAvailableCodecs(compatibilityResult);const px2=(info.width||1920)*(info.height||1080);const is4K=px2>=3840*2160*0.9;const preferred=is4K?'avc1.640034':'avc1.64002A';const def=av.find(c=>c.value===preferred)||av.find(c=>c.value.includes('avc1.6'))||av[0]||{value:'avc1.42001E',label:'H.264'};let br;if(px2>=3840*2160)br=35e6;else if(px2>=2560*1440)br=16e6;else if(px2>=1920*1080)br=8e6;else if(px2>=1280*720)br=5e6;else br=2.5e6;return{width:info.width||1920,height:info.height||1080,codec:def.value,codecLabel:def.label,videoBitrate:Math.min(info.videoBitrate||br,br),bitrateMode:'vbr',fps:info.fps||30,audioBitrate:128000,keepOriginalFps:true};}
+// ============================================= MEDIA INFO =============================================
+async function extractMediaInfo(task){try{const info=await parseVideoFile(task.file);task.originalInfo=info;task.options=getDefaultOptions(info);log(task.file.name+': '+info.width+'x'+info.height+', '+info.fps+'fps, '+info.codecLabel+', '+formatDuration(info.duration));renderQueue();if(task.id===appState.selectedId)updateMainContent();}catch(err){console.error(err);log('ERROR: '+task.file.name+' - '+err.message,true);task.originalInfo={width:0,height:0,duration:0,fps:0,codec:'',codecLabel:'?',videoBitrate:0,audioBitrate:0,hasAudio:false,error:err.message};task.options=getDefaultOptions(task.originalInfo);renderQueue();}}
+function parseVideoFile(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=(e)=>{const buf=e.target.result;const mf=MP4Box.createFile();const info={width:0,height:0,duration:0,fps:0,codec:'',codecLabel:'',videoBitrate:0,audioBitrate:0,hasAudio:false,videoTrackId:0,audioTrackId:0,trackInfo:null};let resolved=false;mf.onReady=(mi)=>{info.trackInfo=mi;if(!mi.videoTracks||mi.videoTracks.length===0){if(!resolved){resolved=true;reject(new Error('No video track'));}return;}const vt=mi.videoTracks[0];info.width=vt.track_width;info.height=vt.track_height;info.codec=vt.codec||'';info.codecLabel=getCodecLabel(vt.codec||'');info.videoTrackId=vt.id;const td=vt.samples_duration||(mi.duration/(mi.timescale||1)*(vt.timescale||1));const tts=vt.timescale||mi.timescale||1;const nb=vt.nb_samples||0;if(nb>0&&td>0)info.fps=Math.round(nb/(td/tts));info.duration=(vt.samples_duration||mi.duration)/(vt.timescale||mi.timescale||1);const ds=info.duration||1;info.videoBitrate=Math.round((file.size*0.9*8)/ds);if(mi.audioTracks&&mi.audioTracks.length>0){info.hasAudio=true;info.audioTrackId=mi.audioTracks[0].id;info.audioBitrate=128000;}if(!resolved){resolved=true;resolve(info);}};mf.onError=()=>{if(!resolved){resolved=true;reject(new Error('Parse failed'));}};buf.fileStart=0;mf.appendBuffer(buf);mf.flush();setTimeout(()=>{if(!resolved){resolved=true;reject(new Error('Metadata timeout'));}},5000);};r.onerror=()=>reject(new Error('Read failed'));r.readAsArrayBuffer(file);});}
+function getDefaultOptions(info){if(!compatibilityResult)return{width:info.width||1920,height:info.height||1080,codec:'avc1.42001E',codecLabel:'H.264',videoBitrate:5e6,bitrateMode:'vbr',fps:info.fps||30,audioBitrate:128000,keepOriginalFps:true};const av=getAvailableCodecs(compatibilityResult);const px=(info.width||1920)*(info.height||1080);const is4K=px>=3840*2160*0.9;const def=av.find(c=>c.value===(is4K?'avc1.640034':'avc1.64002A'))||av.find(c=>c.value.includes('avc1'))||av[0]||{value:'avc1.42001E',label:'H.264'};let br;if(px>=3840*2160)br=35e6;else if(px>=2560*1440)br=16e6;else if(px>=1920*1080)br=8e6;else if(px>=1280*720)br=5e6;else br=2.5e6;return{width:info.width||1920,height:info.height||1080,codec:def.value,codecLabel:def.label,videoBitrate:Math.min(info.videoBitrate||br,br),bitrateMode:'vbr',fps:info.fps||30,audioBitrate:128000,keepOriginalFps:true};}
 
-// =============================================
-// FILE MANAGEMENT
-// =============================================
+// ============================================= FILE MGMT =============================================
 function isValidVideoFile(file){const ext='.'+file.name.split('.').pop().toLowerCase();return SUPPORTED_EXTENSIONS.includes(ext)||file.type.startsWith('video/');}
 function addFiles(files){const nt=[];for(const f of files){if(!isValidVideoFile(f)){showToast('"'+f.name+'" '+t('notSupportedFormat'),'warning');continue;}if(f.size>MAX_FILE_SIZE){showToast('"'+f.name+'" '+t('tooLarge'),'error');continue;}if(appState.queue.some(x=>x.file.name===f.name&&x.file.size===f.size)){showToast('"'+f.name+'" '+t('alreadyInQueue'),'info');continue;}nt.push({id:generateId(),file:f,status:'pending',originalInfo:null,options:null,result:null,error:null,progress:0,abortController:null,_previewUrl:null});}appState.queue.push(...nt);if(!appState.selectedId&&appState.queue.length>0)appState.selectedId=appState.queue[0].id;renderQueue();updateMainContent();nt.forEach(x=>extractMediaInfo(x));}
 function removeTask(id){const i=appState.queue.findIndex(x=>x.id===id);if(i===-1)return;const t=appState.queue[i];if(t.status==='processing'&&t.abortController){t.abortController.abort();appState.processingCount--;}if(t.result?.url)URL.revokeObjectURL(t.result.url);if(t._previewUrl)URL.revokeObjectURL(t._previewUrl);appState.queue.splice(i,1);if(appState.selectedId===id)appState.selectedId=appState.queue[0]?.id||null;renderQueue();updateMainContent();}
@@ -286,336 +122,139 @@ function selectTask(id){appState.selectedId=id;renderQueue();updateMainContent()
 function getSelectedTask(){return appState.queue.find(x=>x.id===appState.selectedId)||null;}
 function updateTaskOptions(id,opts,skip){const t=appState.queue.find(x=>x.id===id);if(!t||!t.options)return;Object.assign(t.options,opts);if(!skip){renderQueue();if(id===appState.selectedId)renderParamPanel(t);}}
 
-// =============================================
-// QUEUE RENDERING
-// =============================================
-function renderQueue(){
-  const sec=document.getElementById('queueSection'),list=document.getElementById('queueList'),cnt=document.getElementById('queueCount');
-  if(appState.queue.length===0){sec.classList.add('hidden');return;}
-  sec.classList.remove('hidden');cnt.textContent=appState.queue.length;
-  list.innerHTML=appState.queue.map(task=>{
-    const sel=task.id===appState.selectedId,info=task.originalInfo;
-    let st='';if(task.status==='completed')st='<span class="queue-item__status status-completed">'+t('completed')+'</span>';else if(task.status==='processing')st='<span class="queue-item__status status-processing">'+task.progress+'%</span>';else if(task.status==='failed')st='<span class="queue-item__status status-failed">'+t('failed')+'</span>';else st='<span class="queue-item__status status-pending">'+t('waiting')+'</span>';
-    let act='';if(task.status==='pending')act='<button class="btn btn--primary btn--small start-btn" data-id="'+task.id+'">'+t('start')+'</button>';else if(task.status==='processing')act='<button class="btn btn--danger btn--small cancel-btn" data-id="'+task.id+'">'+t('cancel')+'</button>';else if(task.status==='completed')act='<button class="btn btn--primary btn--small download-btn" data-id="'+task.id+'">'+t('download')+'</button><button class="btn btn--ghost btn--small compare-btn" data-id="'+task.id+'">'+t('compare')+'</button>';else if(task.status==='failed')act='<button class="btn btn--ghost btn--small retry-btn" data-id="'+task.id+'">'+t('retry')+'</button>';
-    act+='<button class="btn btn--icon remove-btn" data-id="'+task.id+'" title="'+t('remove')+'">✕</button>';
-    const iH=info?info.width+'×'+info.height+' | '+info.fps+'fps | '+info.codecLabel+' | '+formatDuration(info.duration):t('analyzing');
-    const tH=task.options?t('target')+': '+task.options.width+'×'+task.options.height+' | '+formatBitrate(task.options.videoBitrate)+' | '+task.options.fps+'fps':'';
-    const eH=(task.options&&task.originalInfo)?t('estSize')+': '+formatSize(estimateSize(task.options,task.originalInfo.duration)):'';
-    let pB='';if(task.status==='processing'||task.status==='completed'||task.status==='failed')pB='<div class="queue-item__progress"><div class="queue-item__progress-bar '+task.status+'" style="width:'+task.progress+'%"></div></div>';
-    return'<div class="queue-item '+(sel?'selected ':'')+task.status+'" data-id="'+task.id+'"><div class="queue-item__info"><div class="queue-item__name">'+escapeHtml(task.file.name)+'</div><div class="queue-item__meta">'+formatSize(task.file.size)+' | '+iH+'</div>'+(tH?'<div class="queue-item__target">'+tH+'</div>':'')+(eH?'<div style="font-size:12px;color:var(--text-secondary)">'+eH+'</div>':'')+'</div><div class="queue-item__actions">'+act+'</div>'+pB+'</div>';
-  }).join('');
-  list.querySelectorAll('.queue-item').forEach(el=>{el.addEventListener('click',e=>{if(e.target.closest('button'))return;selectTask(el.dataset.id);});});
-  list.querySelectorAll('.start-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();startCompression(b.dataset.id);}));
-  list.querySelectorAll('.cancel-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();cancelCompression(b.dataset.id);}));
-  list.querySelectorAll('.download-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();downloadResult(b.dataset.id);}));
-  list.querySelectorAll('.compare-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openCompare(b.dataset.id);}));
-  list.querySelectorAll('.retry-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();retryTask(b.dataset.id);}));
-  list.querySelectorAll('.remove-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();removeTask(b.dataset.id);}));
-}
+// ============================================= QUEUE RENDER =============================================
+function renderQueue(){const sec=document.getElementById('queueSection'),list=document.getElementById('queueList'),cnt=document.getElementById('queueCount');if(appState.queue.length===0){sec.classList.add('hidden');return;}sec.classList.remove('hidden');cnt.textContent=appState.queue.length;list.innerHTML=appState.queue.map(task=>{const sel=task.id===appState.selectedId,info=task.originalInfo;let st='';if(task.status==='completed')st='<span class="queue-item__status status-completed">'+t('completed')+'</span>';else if(task.status==='processing')st='<span class="queue-item__status status-processing">'+task.progress+'%</span>';else if(task.status==='failed')st='<span class="queue-item__status status-failed">'+t('failed')+'</span>';else st='<span class="queue-item__status status-pending">'+t('waiting')+'</span>';let act='';if(task.status==='pending')act='<button class="btn btn--primary btn--small start-btn" data-id="'+task.id+'">'+t('start')+'</button>';else if(task.status==='processing')act='<button class="btn btn--danger btn--small cancel-btn" data-id="'+task.id+'">'+t('cancel')+'</button>';else if(task.status==='completed')act='<button class="btn btn--primary btn--small download-btn" data-id="'+task.id+'">'+t('download')+'</button><button class="btn btn--ghost btn--small compare-btn" data-id="'+task.id+'">'+t('compare')+'</button>';else if(task.status==='failed')act='<button class="btn btn--ghost btn--small retry-btn" data-id="'+task.id+'">'+t('retry')+'</button>';act+='<button class="btn btn--icon remove-btn" data-id="'+task.id+'" title="'+t('remove')+'">✕</button>';const iH=info?info.width+'×'+info.height+' | '+info.fps+'fps | '+info.codecLabel+' | '+formatDuration(info.duration):t('analyzing');const tH=task.options?t('target')+': '+task.options.width+'×'+task.options.height+' | '+formatBitrate(task.options.videoBitrate)+' | '+task.options.fps+'fps':'';const eH=(task.options&&task.originalInfo)?t('estSize')+': '+formatSize(estimateSize(task.options,task.originalInfo.duration)):'';let pB='';if(task.status==='processing'||task.status==='completed'||task.status==='failed')pB='<div class="queue-item__progress"><div class="queue-item__progress-bar '+task.status+'" style="width:'+task.progress+'%"></div></div>';return'<div class="queue-item '+(sel?'selected ':'')+task.status+'" data-id="'+task.id+'"><div class="queue-item__info"><div class="queue-item__name">'+escapeHtml(task.file.name)+'</div><div class="queue-item__meta">'+formatSize(task.file.size)+' | '+iH+'</div>'+(tH?'<div class="queue-item__target">'+tH+'</div>':'')+(eH?'<div style="font-size:12px;color:var(--text-secondary)">'+eH+'</div>':'')+'</div><div class="queue-item__actions">'+act+'</div>'+pB+'</div>';}).join('');list.querySelectorAll('.queue-item').forEach(el=>{el.addEventListener('click',e=>{if(e.target.closest('button'))return;selectTask(el.dataset.id);});});list.querySelectorAll('.start-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();startCompression(b.dataset.id);}));list.querySelectorAll('.cancel-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();cancelCompression(b.dataset.id);}));list.querySelectorAll('.download-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();downloadResult(b.dataset.id);}));list.querySelectorAll('.compare-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openCompare(b.dataset.id);}));list.querySelectorAll('.retry-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();retryTask(b.dataset.id);}));list.querySelectorAll('.remove-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();removeTask(b.dataset.id);}));}
 
-// =============================================
-// PARAMETER PANEL
-// =============================================
-function renderParamPanel(task){
-  const panel=document.getElementById('paramPanel');
-  if(!task||!task.originalInfo){panel.innerHTML='<p class="preview-area__empty"><span>📋</span>'+t('selectFilePrompt')+'</p>';return;}
-  const info=task.originalInfo,opts=task.options;if(!opts)return;
-  const ac=compatibilityResult?getAvailableCodecs(compatibilityResult):[{value:'avc1.42001E',label:'H.264',hardware:true}];
-  const resos=[{label:'4K',w:3840,h:2160},{label:'2K',w:2560,h:1440},{label:'1080p',w:1920,h:1080},{label:'720p',w:1280,h:720},{label:'480p',w:854,h:480},{label:t('originalSize'),w:info.width,h:info.height}];
-  const isCustom=!resos.some(p=>p.label!==t('originalSize')&&p.w===opts.width&&p.h===opts.height)&&!(opts.width===info.width&&opts.height===info.height);
-  const brK=Math.round(opts.videoBitrate/1000),est=estimateSize(opts,info.duration),sPct=info.videoBitrate?Math.round((1-opts.videoBitrate/info.videoBitrate)*100):0;
-  const fpsOpts=[{label:t('keepOrigFps')+' ('+info.fps+' fps)',value:'orig'},{label:'60 fps',value:60},{label:'30 fps',value:30},{label:'24 fps',value:24},{label:'15 fps',value:15}];
+// ============================================= PARAM PANEL =============================================
+function renderParamPanel(task){const panel=document.getElementById('paramPanel');if(!task||!task.originalInfo){panel.innerHTML='<p class="preview-area__empty"><span>📋</span>'+t('selectFilePrompt')+'</p>';return;}const info=task.originalInfo,opts=task.options;if(!opts)return;const ac=compatibilityResult?getAvailableCodecs(compatibilityResult):[{value:'avc1.42001E',label:'H.264',hardware:true}];const resos=[{label:'4K',w:3840,h:2160},{label:'2K',w:2560,h:1440},{label:'1080p',w:1920,h:1080},{label:'720p',w:1280,h:720},{label:'480p',w:854,h:480},{label:t('originalSize'),w:info.width,h:info.height}];const isCustom=!resos.some(p=>p.label!==t('originalSize')&&p.w===opts.width&&p.h===opts.height)&&!(opts.width===info.width&&opts.height===info.height);const brK=Math.round(opts.videoBitrate/1000),est=estimateSize(opts,info.duration),sPct=info.videoBitrate?Math.round((1-opts.videoBitrate/info.videoBitrate)*100):0;const fpsOpts=[{label:t('keepOrigFps')+' ('+info.fps+' fps)',value:'orig'},{label:'60 fps',value:60},{label:'30 fps',value:30},{label:'24 fps',value:24},{label:'15 fps',value:15}];panel.innerHTML='<h3>'+escapeHtml(task.file.name)+'</h3><div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">'+t('origInfo')+': '+info.width+'×'+info.height+' | '+info.codecLabel+' | '+formatSize(task.file.size)+'</div><div class="param-group"><label class="param-group__label">'+t('targetRes')+'</label><div class="resolution-presets">'+resos.map(r=>{const a=(r.label===t('originalSize')&&opts.width===info.width&&opts.height===info.height)||(r.label!==t('originalSize')&&opts.width===r.w&&opts.height===r.h);return'<button class="resolution-preset '+(a?'active':'')+'" data-preset="'+r.label+'" data-w="'+r.w+'" data-h="'+r.h+'">'+r.label+'</button>';}).join('')+'<button class="resolution-preset '+(isCustom?'active':'')+'" data-preset="custom">'+t('custom')+'</button></div><div class="custom-resolution" style="'+(isCustom?'':'display:none')+'"><input type="number" id="customWidth" value="'+opts.width+'" min="64" max="7680" step="2"><span>×</span><input type="number" id="customHeight" value="'+opts.height+'" min="64" max="7680" step="2"></div></div><div class="param-group"><label class="param-group__label">'+t('videoCodec')+'</label><select class="param-select" id="codecSelect">'+ac.map(c=>'<option value="'+c.value+'" '+(opts.codec===c.value?'selected':'')+' '+(c.hardware?'':'disabled')+'>'+c.label+(c.hardware?'':' ('+t('unavailable')+')')+'</option>').join('')+'</select></div><div class="param-group"><label class="param-group__label">'+t('bitrateMode')+'</label><div class="radio-group"><label><input type="radio" name="bitrateMode" value="vbr" '+(opts.bitrateMode==='vbr'?'checked':'')+'> '+t('vbr')+'</label><label><input type="radio" name="bitrateMode" value="cbr" '+(opts.bitrateMode==='cbr'?'checked':'')+'> '+t('cbr')+'</label></div></div><div class="param-group"><label class="param-group__label">'+t('videoBitrate')+': <span id="bitrateLabel">'+formatBitrate(opts.videoBitrate)+'</span></label><div class="bitrate-group"><input type="range" id="bitrateRange" min="500" max="50000" value="'+brK+'" step="100"><input type="number" id="bitrateInput" value="'+brK+'" min="500" max="50000" step="100"><span class="bitrate-group__unit">Kbps</span></div><div class="bitrate-presets">'+[2500,5000,8000,12000,20000,35000].map(b=>'<button class="bitrate-preset" data-br="'+b+'">'+(b>=1000?(b/1000).toFixed(0)+'M':b+'K')+'</button>').join('')+'</div></div><div class="param-group"><label class="param-group__label">'+t('fps')+'</label><select class="param-select" id="fpsSelect">'+fpsOpts.map(f=>'<option value="'+f.value+'" '+((f.value==='orig'&&opts.keepOriginalFps)||(f.value===opts.fps&&!opts.keepOriginalFps)?'selected':'')+'>'+f.label+'</option>').join('')+'</select></div>'+(info.hasAudio?'<div class="param-group"><label class="param-group__label">'+t('audioBitrate')+'</label><select class="param-select" id="audioBitrateSelect">'+[64,96,128,192,256,320].map(b=>'<option value="'+(b*1000)+'" '+(opts.audioBitrate===b*1000?'selected':'')+'>'+b+' Kbps (AAC)</option>').join('')+'</select></div>':'<div class="param-group"><span style="color:var(--text-secondary);font-size:13px">'+t('noAudio')+'</span></div>')+'<button class="btn btn--ghost apply-all-btn" id="applyAllBtn">'+t('applyAll')+'</button><div class="estimate-display"><div class="estimate-display__value">'+formatSize(est)+'</div><div class="estimate-display__range">'+t('approx')+' '+formatSize(est*0.95)+' ~ '+formatSize(est*1.05)+'</div>'+(sPct>0?'<div class="estimate-display__percent">'+t('savePct')+' '+sPct+'% '+t('space')+'</div>':'')+'</div>';setupParamListeners(task);}
+function setupParamListeners(task){const p=document.getElementById('paramPanel');p.querySelectorAll('.resolution-preset').forEach(b=>{b.addEventListener('click',()=>{const pr=b.dataset.preset,cd=p.querySelector('.custom-resolution');p.querySelectorAll('.resolution-preset').forEach(x=>x.classList.remove('active'));b.classList.add('active');if(pr==='custom'){if(cd)cd.style.display='flex';updateTaskOptions(task.id,{width:+p.querySelector('#customWidth')?.value||task.options.width,height:+p.querySelector('#customHeight')?.value||task.options.height});}else{if(cd)cd.style.display='none';updateTaskOptions(task.id,{width:+b.dataset.w,height:+b.dataset.h});}});});['#customWidth','#customHeight'].forEach(s=>{const i=p.querySelector(s);if(i)i.addEventListener('change',()=>{updateTaskOptions(task.id,{width:+p.querySelector('#customWidth')?.value||task.options.width,height:+p.querySelector('#customHeight')?.value||task.options.height});});});p.querySelector('#codecSelect')?.addEventListener('change',function(){updateTaskOptions(task.id,{codec:this.value,codecLabel:this.selectedOptions[0]?.textContent||this.value});});p.querySelectorAll('input[name="bitrateMode"]').forEach(r=>{r.addEventListener('change',()=>updateTaskOptions(task.id,{bitrateMode:r.value}));});const range=p.querySelector('#bitrateRange'),inp=p.querySelector('#bitrateInput');if(range&&inp){const sync=v=>{range.value=v;inp.value=v;const l=p.querySelector('#bitrateLabel');if(l)l.textContent=formatBitrate(v*1000);updateTaskOptions(task.id,{videoBitrate:v*1000});};range.addEventListener('input',()=>sync(range.value));inp.addEventListener('change',()=>{let v=+inp.value;v=Math.max(500,Math.min(50000,v||5000));sync(v);});}p.querySelectorAll('.bitrate-preset').forEach(b=>{b.addEventListener('click',()=>{const br=+b.dataset.br;if(range){range.value=br;inp.value=br;const l=p.querySelector('#bitrateLabel');if(l)l.textContent=formatBitrate(br*1000);}updateTaskOptions(task.id,{videoBitrate:br*1000});});});p.querySelector('#fpsSelect')?.addEventListener('change',function(){if(this.value==='orig')updateTaskOptions(task.id,{fps:task.originalInfo.fps,keepOriginalFps:true});else updateTaskOptions(task.id,{fps:+this.value,keepOriginalFps:false});});p.querySelector('#audioBitrateSelect')?.addEventListener('change',function(){updateTaskOptions(task.id,{audioBitrate:+this.value});});p.querySelector('#applyAllBtn')?.addEventListener('click',()=>{const o={...task.options};appState.queue.forEach(t=>{if(t.id!==task.id&&t.status==='pending')updateTaskOptions(t.id,o,true);});showToast(t('appliedAll'),'success');});}
 
-  panel.innerHTML=
-    '<h3>'+escapeHtml(task.file.name)+'</h3>'+
-    '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">'+t('origInfo')+': '+info.width+'×'+info.height+' | '+info.codecLabel+' | '+formatSize(task.file.size)+'</div>'+
-    '<div class="param-group"><label class="param-group__label">'+t('targetRes')+'</label>'+
-    '<div class="resolution-presets">'+resos.map(r=>{const a=(r.label===t('originalSize')&&opts.width===info.width&&opts.height===info.height)||(r.label!==t('originalSize')&&opts.width===r.w&&opts.height===r.h);return'<button class="resolution-preset '+(a?'active':'')+'" data-preset="'+r.label+'" data-w="'+r.w+'" data-h="'+r.h+'">'+r.label+'</button>';}).join('')+'<button class="resolution-preset '+(isCustom?'active':'')+'" data-preset="custom">'+t('custom')+'</button></div>'+
-    '<div class="custom-resolution" style="'+(isCustom?'':'display:none')+'"><input type="number" id="customWidth" value="'+opts.width+'" min="64" max="7680" step="2"><span>×</span><input type="number" id="customHeight" value="'+opts.height+'" min="64" max="7680" step="2"></div></div>'+
-    '<div class="param-group"><label class="param-group__label">'+t('videoCodec')+'</label><select class="param-select" id="codecSelect">'+ac.map(c=>'<option value="'+c.value+'" '+(opts.codec===c.value?'selected':'')+' '+(c.hardware?'':'disabled')+'>'+c.label+(c.hardware?'':' ('+t('unavailable')+')')+'</option>').join('')+'</select></div>'+
-    '<div class="param-group"><label class="param-group__label">'+t('bitrateMode')+'</label><div class="radio-group"><label><input type="radio" name="bitrateMode" value="vbr" '+(opts.bitrateMode==='vbr'?'checked':'')+'> '+t('vbr')+'</label><label><input type="radio" name="bitrateMode" value="cbr" '+(opts.bitrateMode==='cbr'?'checked':'')+'> '+t('cbr')+'</label></div></div>'+
-    '<div class="param-group"><label class="param-group__label">'+t('videoBitrate')+': <span id="bitrateLabel">'+formatBitrate(opts.videoBitrate)+'</span></label><div class="bitrate-group"><input type="range" id="bitrateRange" min="500" max="50000" value="'+brK+'" step="100"><input type="number" id="bitrateInput" value="'+brK+'" min="500" max="50000" step="100"><span class="bitrate-group__unit">Kbps</span></div><div class="bitrate-presets">'+[2500,5000,8000,12000,20000,35000].map(b=>'<button class="bitrate-preset" data-br="'+b+'">'+(b>=1000?(b/1000).toFixed(0)+'M':b+'K')+'</button>').join('')+'</div></div>'+
-    '<div class="param-group"><label class="param-group__label">'+t('fps')+'</label><select class="param-select" id="fpsSelect">'+fpsOpts.map(f=>'<option value="'+f.value+'" '+((f.value==='orig'&&opts.keepOriginalFps)||(f.value===opts.fps&&!opts.keepOriginalFps)?'selected':'')+'>'+f.label+'</option>').join('')+'</select></div>'+
-    (info.hasAudio?'<div class="param-group"><label class="param-group__label">'+t('audioBitrate')+'</label><select class="param-select" id="audioBitrateSelect">'+[64,96,128,192,256,320].map(b=>'<option value="'+(b*1000)+'" '+(opts.audioBitrate===b*1000?'selected':'')+'>'+b+' Kbps (AAC)</option>').join('')+'</select></div>':'<div class="param-group"><span style="color:var(--text-secondary);font-size:13px">'+t('noAudio')+'</span></div>')+
-    '<button class="btn btn--ghost apply-all-btn" id="applyAllBtn">'+t('applyAll')+'</button>'+
-    '<div class="estimate-display"><div class="estimate-display__value">'+formatSize(est)+'</div><div class="estimate-display__range">'+t('approx')+' '+formatSize(est*0.95)+' ~ '+formatSize(est*1.05)+'</div>'+(sPct>0?'<div class="estimate-display__percent">'+t('savePct')+' '+sPct+'% '+t('space')+'</div>':'')+'</div>';
-  setupParamListeners(task);
-}
-function setupParamListeners(task){
-  const p=document.getElementById('paramPanel');
-  p.querySelectorAll('.resolution-preset').forEach(b=>{b.addEventListener('click',()=>{const pr=b.dataset.preset,cd=p.querySelector('.custom-resolution');p.querySelectorAll('.resolution-preset').forEach(x=>x.classList.remove('active'));b.classList.add('active');if(pr==='custom'){if(cd)cd.style.display='flex';updateTaskOptions(task.id,{width:+p.querySelector('#customWidth')?.value||task.options.width,height:+p.querySelector('#customHeight')?.value||task.options.height});}else{if(cd)cd.style.display='none';updateTaskOptions(task.id,{width:+b.dataset.w,height:+b.dataset.h});}});});
-  ['#customWidth','#customHeight'].forEach(s=>{const i=p.querySelector(s);if(i)i.addEventListener('change',()=>{updateTaskOptions(task.id,{width:+p.querySelector('#customWidth')?.value||task.options.width,height:+p.querySelector('#customHeight')?.value||task.options.height});});});
-  p.querySelector('#codecSelect')?.addEventListener('change',function(){updateTaskOptions(task.id,{codec:this.value,codecLabel:this.selectedOptions[0]?.textContent||this.value});});
-  p.querySelectorAll('input[name="bitrateMode"]').forEach(r=>{r.addEventListener('change',()=>updateTaskOptions(task.id,{bitrateMode:r.value}));});
-  const range=p.querySelector('#bitrateRange'),inp=p.querySelector('#bitrateInput');
-  if(range&&inp){const sync=v=>{range.value=v;inp.value=v;const l=p.querySelector('#bitrateLabel');if(l)l.textContent=formatBitrate(v*1000);updateTaskOptions(task.id,{videoBitrate:v*1000});};range.addEventListener('input',()=>sync(range.value));inp.addEventListener('change',()=>{let v=+inp.value;v=Math.max(500,Math.min(50000,v||5000));sync(v);});}
-  p.querySelectorAll('.bitrate-preset').forEach(b=>{b.addEventListener('click',()=>{const br=+b.dataset.br;if(range){range.value=br;inp.value=br;const l=p.querySelector('#bitrateLabel');if(l)l.textContent=formatBitrate(br*1000);}updateTaskOptions(task.id,{videoBitrate:br*1000});});});
-  p.querySelector('#fpsSelect')?.addEventListener('change',function(){if(this.value==='orig')updateTaskOptions(task.id,{fps:task.originalInfo.fps,keepOriginalFps:true});else updateTaskOptions(task.id,{fps:+this.value,keepOriginalFps:false});});
-  p.querySelector('#audioBitrateSelect')?.addEventListener('change',function(){updateTaskOptions(task.id,{audioBitrate:+this.value});});
-  p.querySelector('#applyAllBtn')?.addEventListener('click',()=>{const o={...task.options};appState.queue.forEach(t=>{if(t.id!==task.id&&t.status==='pending')updateTaskOptions(t.id,o,true);});showToast(t('appliedAll'),'success');});
-}
-
-// =============================================
-// COMPRESSION ENGINE (play-based frame extraction)
-// =============================================
+// ============================================= COMPRESSION ENGINE =============================================
+// Uses canvas.captureStream() + MediaRecorder for native GPU-accelerated encoding + muxing
 class CompressionEngine {
   constructor(file,options,originalInfo,onProgress,signal){
     this.file=file;this.options=options;this.originalInfo=originalInfo;this.onProgress=onProgress;this.signal=signal;
-    this.videoEncoder=null;this.audioEncoder=null;this.videoEl=null;this.canvas=null;this.ctx=null;
-    this.encodedVideoChunks=[];this.encodedAudioChunks=[];this.startTime=0;this.aborted=false;
-    this._resolve=null;this._reject=null;
+    this.videoEl=null;this.canvas=null;this.ctx=null;this.recorder=null;this.chunks=[];this.startTime=0;this._resolve=null;this._reject=null;
   }
   async start(){return new Promise((res,rej)=>{this._resolve=res;this._reject=rej;this._run().catch(rej);});}
   async _run(){
     this.startTime=performance.now();const url=URL.createObjectURL(this.file);
     log('Compressing: '+this.file.name+' → '+this.options.width+'x'+this.options.height+' '+formatBitrate(this.options.videoBitrate));
     try{
-      this.reportProgress('decode',0);
-      await this._captureAndEncode(url);
+      this.reportProgress('capture',0);
+      const blob=await this._captureAndRecord(url);
       if(this.signal?.aborted)throw new Error('Cancelled');
-      // Give encoder time to process queue, then flush with timeout
-      if(this.videoEncoder&&!this._encoderCrashed){
-        log('Waiting for encoder to drain...');
-        await new Promise(r=>setTimeout(r,1000)); // Let GPU finish pending work
-        const flushResult = await Promise.race([
-          this.videoEncoder.flush().then(()=>'ok'),
-          new Promise(r=>setTimeout(()=>r('timeout'),30000)),
-        ]);
-        if(flushResult==='timeout'){log('Encoder flush timed out after 30s',true);}
-      }
-      log('Encoded: '+this.encodedVideoChunks.length+' chunks');
-      if(this.encodedVideoChunks.length===0)throw new Error(t('decodeError'));
-      if(this.options.audioBitrate>0&&this.originalInfo.hasAudio){this.reportProgress('audio',50);try{await this._extractAndEncodeAudio(url);}catch(e){log('Audio skipped: '+e.message,true);}}
-      this.reportProgress('mux',90);const blob=await this._muxToMp4();
-      log('Muxed: '+formatSize(blob.size));this.reportProgress('done',100);
+      if(!blob||blob.size<500)throw new Error(t('emptyOutput'));
+      this.reportProgress('done',100);
+      log('Done: '+formatSize(blob.size));
       this._resolve({blob,size:blob.size,url:URL.createObjectURL(blob)});
-    }finally{
-      URL.revokeObjectURL(url);
-      try{this.videoEncoder?.close();}catch{}
-    }
+    }finally{URL.revokeObjectURL(url);try{this.recorder?.stop();}catch{}}
   }
-  // Play video and capture frames via createImageBitmap (avoids canvas GPU texture)
-  async _captureAndEncode(url){
+
+  async _captureAndRecord(url){
+    // Load source video
     const video=document.createElement('video');this.videoEl=video;
-    video.src=url;video.muted=true;video.playsInline=true;video.preload='auto';
-    video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');
+    video.src=url;video.muted=true;video.playsInline=true;video.preload='auto';video.setAttribute('playsinline','');
     await new Promise((resolve,reject)=>{
       video.onloadedmetadata=()=>resolve();
       video.onerror=()=>reject(new Error('Browser cannot play this video'));
       setTimeout(()=>reject(new Error('Video load timeout')),15000);
     });
-    const duration=video.duration;if(!duration||duration<=0)throw new Error('Cannot read video duration');
-    log('Video: '+video.videoWidth+'x'+video.videoHeight+', '+duration.toFixed(1)+'s');
+    const dur=video.duration;if(!dur||dur<=0)throw new Error('Cannot read video duration');
+    log('Source: '+video.videoWidth+'x'+video.videoHeight+', '+dur.toFixed(1)+'s');
 
-    // Pre-flight: initialize and test encoder with a dummy frame
-    await this._initEncoderWithTest();
-    log('Encoder ready, starting capture');
+    // Setup output canvas
+    this.canvas=document.createElement('canvas');
+    this.canvas.width=this.options.width;this.canvas.height=this.options.height;
+    this.ctx=this.canvas.getContext('2d');
 
-    const targetFps=this.options.fps;const frameInterval=1000/targetFps;
-    const totalFrames=Math.ceil(duration*targetFps);
+    // Capture canvas stream at target FPS
+    const canvasStream=this.canvas.captureStream(this.options.fps);
 
-    let capturedCount=0, lastCaptureTime=-frameInterval/1000;
-    let done=false;
+    // Add audio track
+    if(this.originalInfo.hasAudio&&this.options.audioBitrate>0){
+      try{const vs=video.captureStream();const at=vs.getAudioTracks();if(at.length>0)canvasStream.addTrack(at[0]);}catch(e){log('Audio track unavailable',true);}
+    }
+
+    // Setup MediaRecorder (handles encoding + muxing natively)
+    let mime='video/webm;codecs=vp8';
+    const tryMimes=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'];
+    for(const m of tryMimes){if(MediaRecorder.isTypeSupported(m)){mime=m;break;}}
+    log('Output: '+mime);
+
+    const recorder=new MediaRecorder(canvasStream,{mimeType:mime,videoBitsPerSecond:this.options.videoBitrate,...(this.options.audioBitrate>0?{audioBitsPerSecond:this.options.audioBitrate}:{})});
+    this.recorder=recorder;
+
+    const dataPromise=new Promise(resolve=>{
+      recorder.ondataavailable=e=>{if(e.data.size>0)this.chunks.push(e.data);};
+      recorder.onstop=()=>{const blob=new Blob(this.chunks,{type:mime});log('Recorder stopped, size: '+formatSize(blob.size));resolve(blob);};
+      recorder.onerror=e=>{log('Recorder error: '+(e.error?.message||'unknown'),true);};
+    });
+
+    recorder.start(2000); // 2s slices
+
+    // Play + draw loop
+    const targetFps=this.options.fps;
+    const frameInterval=1/targetFps;
+    const totalFrames=Math.ceil(dur*targetFps);
+    let drawn=0,lastDraw=-frameInterval,done=false;
+
     video.play().catch(e=>{log('Play error: '+e.message,true);done=true;});
-    const onEnded=()=>{done=true;};video.addEventListener('ended',onEnded);
+    video.addEventListener('ended',()=>{done=true;});
 
-    while(!done&&!this.signal?.aborted&&capturedCount<totalFrames&&!this._encoderCrashed){
-      if(video.paused&&!video.ended&&capturedCount===0){await new Promise(r=>setTimeout(r,100));continue;}
+    while(!done&&!this.signal?.aborted&&drawn<totalFrames){
+      if(video.paused&&!video.ended&&drawn===0){await new Promise(r=>setTimeout(r,100));continue;}
       if(video.ended){done=true;break;}
-
       const ct=video.currentTime;
-      if(ct-lastCaptureTime>=frameInterval/1000&&video.readyState>=2){
-        try{
-          const bitmap=await createImageBitmap(video,{resizeWidth:this.options.width,resizeHeight:this.options.height,resizeQuality:'high'});
-          const frame=new VideoFrame(bitmap,{timestamp:capturedCount*Math.round(1e6/targetFps),duration:Math.round(1e6/targetFps)});
-          bitmap.close();
-          if(this.videoEncoder&&!this._encoderCrashed){
-            this.videoEncoder.encode(frame);
-          }
-          frame.close();
-          lastCaptureTime=ct;capturedCount++;
-        }catch(e){/* skip */}
+      if(ct-lastDraw>=frameInterval&&video.readyState>=2){
+        this.ctx.drawImage(video,0,0,this.options.width,this.options.height);
+        lastDraw=ct;drawn++;
       }
-      if(capturedCount%50===0)this.reportProgress('decode',Math.round((capturedCount/totalFrames)*90));
-      await new Promise(r=>setTimeout(r,Math.max(1,frameInterval/3)));
+      if(drawn%90===0)this.reportProgress('capture',Math.round((drawn/totalFrames)*95));
+      await new Promise(r=>setTimeout(r,Math.max(1,1000/targetFps/2)));
     }
-    video.removeEventListener('ended',onEnded);
     video.pause();video.src='';
-    log('Captured: '+capturedCount+' frames');
-  }
+    log('Frames drawn: '+drawn);
 
-  // Initialize encoder and test with a single frame before starting capture
-  async _initEncoderWithTest(){
-    const codec = pickCodecForResolution(this.options.codec, this.options.width, this.options.height);
-    const cfg = {codec,width:this.options.width,height:this.options.height,bitrate:this.options.videoBitrate,framerate:this.options.fps,...(this.options.bitrateMode==='cbr'?{latencyMode:'realtime'}:{})};
-    this.options._actualCodec = codec;
-    this._encoderCrashed = false;
-
-    // Try GPU first, then CPU
-    for (const useHW of [true, false]) {
-      const accel = useHW ? 'prefer-hardware' : 'prefer-software';
-
-      // Check config support
-      try {
-        const ok = await VideoEncoder.isConfigSupported({...cfg, hardwareAcceleration:accel});
-        if (!ok.supported) { log((useHW?'GPU':'CPU')+' encoder not supported for this config'); continue; }
-      } catch { continue; }
-
-      // Create encoder
-      let encoderError = null;
-      const encoder = new VideoEncoder({
-        output:(chunk)=>{
-          const d=new Uint8Array(chunk.byteLength);chunk.copyTo(d);
-          this.encodedVideoChunks.push({data:d,byteLength:chunk.byteLength,timestamp:chunk.timestamp,duration:chunk.duration,type:chunk.type});
-        },
-        error:(err)=>{ encoderError = err; this._encoderCrashed = true; },
-      });
-
-      try {
-        await encoder.configure({...cfg, hardwareAcceleration:accel});
-      } catch (e) {
-        log('Encoder configure failed ('+(useHW?'GPU':'CPU')+'): '+e.message, true);
-        try{encoder.close();}catch{}
-        continue;
-      }
-
-      // Encode a test frame (solid black, 1×1)
-      const testCanvas = document.createElement('canvas');
-      testCanvas.width = this.options.width; testCanvas.height = this.options.height;
-      const testCtx = testCanvas.getContext('2d');
-      testCtx.fillStyle = 'black'; testCtx.fillRect(0,0,this.options.width,this.options.height);
-      const testFrame = new VideoFrame(testCanvas, {timestamp:0, duration:Math.round(1e6/this.options.fps)});
-
-      try { encoder.encode(testFrame); } catch (e) { encoderError = e; }
-      testFrame.close();
-
-      // Wait briefly to see if encoder errors
-      await new Promise(r=>setTimeout(r,150));
-
-      if (encoderError) {
-        log('Test encode failed ('+(useHW?'GPU':'CPU')+'): '+encoderError.message, true);
-        try{encoder.close();}catch{}
-        continue;
-      }
-
-      // Test encode succeeded — keep this encoder
-      this.videoEncoder = encoder;
-      // Remove the test chunk
-      this.encodedVideoChunks = [];
-      log('Encoder ready: '+codec+' '+(useHW?'GPU':'CPU')+' '+this.options.width+'x'+this.options.height+' @ '+formatBitrate(this.options.videoBitrate));
-      return;
-    }
-
-    throw new Error('No working encoder found for '+codec+' at '+this.options.width+'x'+this.options.height);
-  }
-  // Audio extraction
-  async _extractAndEncodeAudio(url){
-    const resp=await fetch(url);const buf=await resp.arrayBuffer();const actx=new AudioContext({sampleRate:48000});
-    let ab;try{ab=await actx.decodeAudioData(buf.slice(0));}catch(e){actx.close();return;}
-    const ch=Math.min(ab.numberOfChannels,2);const total=ab.length;
-    let fb=ab;if(ab.sampleRate!==48000){const octx=new OfflineAudioContext({numberOfChannels:ch,sampleRate:48000,length:Math.ceil(total*48000/ab.sampleRate)});const src=octx.createBufferSource();src.buffer=ab;src.connect(octx.destination);src.start(0);fb=await octx.startRendering();}
-    actx.close();
-    const encoder=new AudioEncoder({output:(chunk)=>{const d=new Uint8Array(chunk.byteLength);chunk.copyTo(d);this.encodedAudioChunks.push({data:d,byteLength:chunk.byteLength,timestamp:chunk.timestamp,duration:chunk.duration,type:chunk.type});},error:(e)=>console.error(e)});
-    this.audioEncoder=encoder;
-    await encoder.configure({codec:'mp4a.40.2',sampleRate:48000,numberOfChannels:ch,bitrate:this.options.audioBitrate||128000});
-    const fs=1024,nf=Math.ceil(fb.length/fs);let ts=0;
-    for(let i=0;i<nf;i++){if(this.signal?.aborted)break;const o=i*fs,rem=Math.min(fs,fb.length-o);const il=new Float32Array(rem*ch);for(let c=0;c<ch;c++){const cd=fb.getChannelData(c);for(let j=0;j<rem;j++)il[j*ch+c]=cd[o+j];}try{const ad=new AudioData({format:'f32',sampleRate:48000,numberOfFrames:rem,numberOfChannels:ch,timestamp:ts,data:il});encoder.encode(ad);ad.close();ts+=rem*1e6/48000;}catch{}}
-    try{await encoder.flush();}catch{}try{encoder.close();}catch{}log('Audio: '+this.encodedAudioChunks.length+' chunks');
-  }
-  // Mux
-  async _muxToMp4(){
-    const mux=MP4Box.createFile();const vts=this.options.fps*1000;
-    const vId=mux.addTrack({type:'video',width:this.options.width,height:this.options.height,timescale:vts,nb_samples:this.encodedVideoChunks.length,video:{width:this.options.width,height:this.options.height}});
-    for(const c of this.encodedVideoChunks){const usedCodec=this.options._actualCodec||this.options.codec;const avcc=usedCodec.includes('avc')?annexBToAVCC(c.data.buffer):c.data.buffer;mux.addSample(vId,new Uint8Array(avcc),{duration:Math.round((c.duration/1e6)*vts),dts:Math.round((c.timestamp/1e6)*vts),cts:Math.round((c.timestamp/1e6)*vts),is_sync:c.type==='key'});}
-    if(this.encodedAudioChunks.length>0){const ats=48000;const aId=mux.addTrack({type:'audio',timescale:ats,nb_samples:this.encodedAudioChunks.length,audio:{sample_rate:48000,channel_count:2,sample_size:16}});for(const c of this.encodedAudioChunks)mux.addSample(aId,c.data,{duration:Math.round((c.duration/1e6)*ats),dts:Math.round((c.timestamp/1e6)*ats),cts:Math.round((c.timestamp/1e6)*ats),is_sync:true});}
-    return new Promise((res,rej)=>{mux.saveData=(data)=>{const b=new Blob([data],{type:'video/mp4'});if(b.size===0)rej(new Error('Mux output empty'));else res(b);};try{mux.save('file.mp4');}catch(e){rej(e);}});
+    // Wait for recorder to finish — request data and stop
+    recorder.requestData();
+    await new Promise(r=>setTimeout(r,500));
+    if(recorder.state==='recording')recorder.stop();
+    const blob=await dataPromise;
+    return blob;
   }
   reportProgress(stage,pct){this.onProgress({stage,percent:Math.min(99,pct)});}
-  abort(){this.aborted=true;try{this.videoEncoder?.close();}catch{}try{this.audioEncoder?.close();}catch{}try{this.videoEl?.pause();}catch{}}
+  abort(){this.aborted=true;try{this.recorder?.stop();}catch{}try{this.videoEl?.pause();}catch{}}
 }
 
-// =============================================
-// COMPRESSION CONTROL
-// =============================================
+// ============================================= COMPRESSION CONTROL =============================================
 async function startCompression(id){
   const task=appState.queue.find(t=>t.id===id);if(!task||task.status==='processing')return;
   if(!task.options||!task.originalInfo?.codec){showToast(t('waitAnalysis'),'warning');return;}
-  const px=(task.options.width||1920)*(task.options.height||1080);const estMem=(px*4*10)/(1024*1024);
-  if(estMem>500){if(!confirm(t('memoryWarning0')+Math.round(estMem)+t('memoryWarning1')))return;}
-  task.status='processing';task.progress=0;task.error=null;
-  task.abortController=new AbortController();appState.processingCount++;
-  renderQueue();if(task.id===appState.selectedId)renderParamPanel(task);
-  const engine=new CompressionEngine(task.file,task.options,task.originalInfo,(p)=>{if(p.stage==='decode')task.progress=Math.round(p.percent*0.85);else if(p.stage==='mux')task.progress=Math.round(85+p.percent*0.15);else if(p.stage==='done')task.progress=100;renderQueue();},task.abortController.signal);
-  try{
-    const result=await engine.start();task.status='completed';task.progress=100;
-    task.result={blob:result.blob,url:result.url,size:result.size};
-    log('Done: '+task.file.name+' → '+formatSize(result.size));showToast('"'+task.file.name+'" '+t('compressDone'),'success');
-  }catch(err){
-    if(err.message==='Cancelled'){task.status='pending';task.progress=0;}
-    else{task.status='failed';task.error=err.message||'Unknown';task.progress=0;log('Failed: '+task.file.name+' - '+task.error,true);showToast('"'+task.file.name+'" '+t('compressFailed')+': '+task.error,'error');}
-  }
-  task.abortController=null;appState.processingCount--;renderQueue();if(task.id===appState.selectedId)renderParamPanel(task);processNextPending();
+  task.status='processing';task.progress=0;task.error=null;task.abortController=new AbortController();appState.processingCount++;renderQueue();if(task.id===appState.selectedId)renderParamPanel(task);
+  const engine=new CompressionEngine(task.file,task.options,task.originalInfo,(p)=>{if(p.stage==='capture')task.progress=Math.round(p.percent*0.97);else task.progress=p.percent;renderQueue();},task.abortController.signal);
+  try{const r=await engine.start();task.status='completed';task.progress=100;task.result={blob:r.blob,url:r.url,size:r.size};log('Done: '+task.file.name+' → '+formatSize(r.size));showToast('"'+task.file.name+'" '+t('compressDone'),'success');}catch(err){if(err.message==='Cancelled'){task.status='pending';task.progress=0;}else{task.status='failed';task.error=err.message||'Unknown';task.progress=0;log('Failed: '+task.file.name+' - '+task.error,true);showToast('"'+task.file.name+'" '+t('compressFailed')+': '+task.error,'error');}}task.abortController=null;appState.processingCount--;renderQueue();if(task.id===appState.selectedId)renderParamPanel(task);processNextPending();
 }
 function cancelCompression(id){const t=appState.queue.find(x=>x.id===id);if(t?.status==='processing'&&t.abortController)t.abortController.abort();}
 function startAllCompression(){const p=appState.queue.filter(t=>t.status==='pending');if(p.length===0){showToast(t('noPending'),'info');return;}if(appState.processingCount===0)startCompression(p[0].id);else showToast(t('processing'),'info');}
 function processNextPending(){if(appState.processingCount>0)return;const n=appState.queue.find(t=>t.status==='pending'&&t.options);if(n)startCompression(n.id);}
 function retryTask(id){const t=appState.queue.find(x=>x.id===id);if(!t||t.status!=='failed')return;t.status='pending';t.error=null;t.progress=0;t.result=null;renderQueue();if(t.id===appState.selectedId)renderParamPanel(t);startCompression(id);}
-function downloadResult(id){const t=appState.queue.find(x=>x.id===id);if(!t?.result?.url)return;const a=document.createElement('a');a.href=t.result.url;a.download=t.file.name.replace(/\.[^.]+$/,'')+'_compressed.mp4';document.body.appendChild(a);a.click();document.body.removeChild(a);}
+function downloadResult(id){const t=appState.queue.find(x=>x.id===id);if(!t?.result?.url)return;const a=document.createElement('a');a.href=t.result.url;a.download=t.file.name.replace(/\.[^.]+$/,'')+'_compressed.'+(t.result.blob.type.includes('mp4')?'mp4':'webm');document.body.appendChild(a);a.click();document.body.removeChild(a);}
 
-// =============================================
-// PREVIEW & COMPARISON
-// =============================================
+// ============================================= PREVIEW =============================================
 function updateMainContent(){const mc=document.getElementById('mainContent'),tk=getSelectedTask();if(tk){mc.classList.remove('hidden');renderParamPanel(tk);renderPreview(tk);}else mc.classList.add('hidden');}
-function renderPreview(task){
-  const area=document.getElementById('previewArea');
-  if(!task){area.innerHTML='<div class="preview-area__empty"><span>🎥</span><p>'+t('selectFilePreview')+'</p></div>';return;}
-  const info=task.originalInfo,url=URL.createObjectURL(task.file);task._previewUrl=url;
-  area.innerHTML='<div style="width:100%;padding:16px;"><video src="'+url+'" controls style="width:100%;max-height:400px;background:#000;border-radius:var(--radius);"></video>'+(info?'<div class="preview-area__info"><span>📐 '+(info.width||'?')+'×'+(info.height||'?')+'</span><span>🎞️ '+(info.fps||'?')+' fps</span><span>📦 '+(info.codecLabel||'?')+'</span><span>⏱️ '+formatDuration(info.duration)+'</span><span>💾 '+formatSize(task.file.size)+'</span></div>':'')+'</div>';
-}
-function openCompare(id){
-  const task=appState.queue.find(t=>t.id===id);if(!task?.result)return;
-  const modal=document.getElementById('compareModal'),content=document.getElementById('compareContent');
-  const ou=task._previewUrl||URL.createObjectURL(task.file),cu=task.result.url,os=task.file.size,cs=task.result.size,sp=Math.round(((os-cs)/os)*100),rat=(os/cs).toFixed(1);
-  content.innerHTML='<h3 style="margin-bottom:16px;">'+t('compare')+': '+escapeHtml(task.file.name)+'</h3><div class="compare-container"><div class="compare-side"><h4>📁 '+t('original')+'</h4><video src="'+ou+'" controls></video></div><div class="compare-side"><h4>✅ '+t('compressed')+'</h4><video src="'+cu+'" controls></video></div><div class="compare-stats"><div class="compare-stat"><div class="compare-stat__value">'+formatSize(os)+'</div><div class="compare-stat__label">'+t('origSize')+'</div></div><div class="compare-stat"><div class="compare-stat__value" style="color:var(--accent)">'+formatSize(cs)+'</div><div class="compare-stat__label">'+t('compSize')+'</div></div><div class="compare-stat"><div class="compare-stat__value saved">'+(sp>0?'↓':'↑')+' '+Math.abs(sp)+'%</div><div class="compare-stat__label">'+(sp>0?t('saved'):t('increased'))+'</div></div><div class="compare-stat"><div class="compare-stat__value" style="color:var(--accent)">'+rat+'x</div><div class="compare-stat__label">'+t('ratio')+'</div></div></div></div><h4 style="margin:16px 0 8px;">'+t('sliderCompare')+'</h4><div class="slider-compare" id="sliderCompare"><video src="'+ou+'" controls style="width:100%;"></video><div class="slider-compare__top"><video src="'+cu+'" style="width:100%;" muted></video></div><div class="slider-compare__handle" id="sliderHandle"></div></div>';
-  modal.classList.remove('hidden');
-  setTimeout(()=>{const s=document.getElementById('sliderCompare'),h=document.getElementById('sliderHandle');if(!s||!h)return;let d=false;h.addEventListener('mousedown',()=>{d=true;});document.addEventListener('mouseup',()=>{d=false;});document.addEventListener('mousemove',(e)=>{if(!d)return;const r=s.getBoundingClientRect(),x=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));const t=s.querySelector('.slider-compare__top');if(t)t.style.clipPath='inset(0 '+(1-x)*100+'% 0 0)';h.style.left=x*100+'%';});},100);
-}
+function renderPreview(task){const area=document.getElementById('previewArea');if(!task){area.innerHTML='<div class="preview-area__empty"><span>🎥</span><p>'+t('selectFilePreview')+'</p></div>';return;}const info=task.originalInfo,url=URL.createObjectURL(task.file);task._previewUrl=url;area.innerHTML='<div style="width:100%;padding:16px;"><video src="'+url+'" controls style="width:100%;max-height:400px;background:#000;border-radius:var(--radius);"></video>'+(info?'<div class="preview-area__info"><span>📐 '+(info.width||'?')+'×'+(info.height||'?')+'</span><span>🎞️ '+(info.fps||'?')+' fps</span><span>📦 '+(info.codecLabel||'?')+'</span><span>⏱️ '+formatDuration(info.duration)+'</span><span>💾 '+formatSize(task.file.size)+'</span></div>':'')+'</div>';}
+function openCompare(id){const task=appState.queue.find(t=>t.id===id);if(!task?.result)return;const modal=document.getElementById('compareModal'),content=document.getElementById('compareContent');const ou=task._previewUrl||URL.createObjectURL(task.file),cu=task.result.url,os=task.file.size,cs=task.result.size,sp=Math.round(((os-cs)/os)*100),rat=(os/cs).toFixed(1);content.innerHTML='<h3 style="margin-bottom:16px;">'+t('compare')+': '+escapeHtml(task.file.name)+'</h3><div class="compare-container"><div class="compare-side"><h4>📁 '+t('original')+'</h4><video src="'+ou+'" controls></video></div><div class="compare-side"><h4>✅ '+t('compressed')+'</h4><video src="'+cu+'" controls></video></div><div class="compare-stats"><div class="compare-stat"><div class="compare-stat__value">'+formatSize(os)+'</div><div class="compare-stat__label">'+t('origSize')+'</div></div><div class="compare-stat"><div class="compare-stat__value" style="color:var(--accent)">'+formatSize(cs)+'</div><div class="compare-stat__label">'+t('compSize')+'</div></div><div class="compare-stat"><div class="compare-stat__value saved">'+(sp>0?'↓':'↑')+' '+Math.abs(sp)+'%</div><div class="compare-stat__label">'+(sp>0?t('saved'):t('increased'))+'</div></div><div class="compare-stat"><div class="compare-stat__value" style="color:var(--accent)">'+rat+'x</div><div class="compare-stat__label">'+t('ratio')+'</div></div></div></div><h4 style="margin:16px 0 8px;">'+t('sliderCompare')+'</h4><div class="slider-compare" id="sliderCompare"><video src="'+ou+'" controls style="width:100%;"></video><div class="slider-compare__top"><video src="'+cu+'" style="width:100%;" muted></video></div><div class="slider-compare__handle" id="sliderHandle"></div></div>';modal.classList.remove('hidden');setTimeout(()=>{const s=document.getElementById('sliderCompare'),h=document.getElementById('sliderHandle');if(!s||!h)return;let d=false;h.addEventListener('mousedown',()=>{d=true;});document.addEventListener('mouseup',()=>{d=false;});document.addEventListener('mousemove',(e)=>{if(!d)return;const r=s.getBoundingClientRect(),x=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));const t=s.querySelector('.slider-compare__top');if(t)t.style.clipPath='inset(0 '+(1-x)*100+'% 0 0)';h.style.left=x*100+'%';});},100);}
 function closeCompare(){const m=document.getElementById('compareModal');m.classList.add('hidden');m.querySelectorAll('video').forEach(v=>v.pause());}
 
-// =============================================
-// DRAG & DROP
-// =============================================
-function setupDragDrop(){
-  const dz=document.getElementById('dropZone'),fi=document.getElementById('fileInput'),fsb=document.getElementById('fileSelectBtn');
-  fsb.addEventListener('click',()=>fi.click());fi.addEventListener('change',()=>{if(fi.files.length>0){addFiles(Array.from(fi.files));fi.value='';}});
-  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('active');});dz.addEventListener('dragleave',()=>dz.classList.remove('active'));
-  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('active');const fs=Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('video/')||isValidVideoFile(f));if(fs.length>0)addFiles(fs);});
-  document.addEventListener('paste',e=>{const fs=Array.from(e.clipboardData.items).filter(i=>i.kind==='file').map(i=>i.getAsFile()).filter(f=>f?.type.startsWith('video/'));if(fs.length>0)addFiles(fs);});
-}
+// ============================================= DRAG & DROP =============================================
+function setupDragDrop(){const dz=document.getElementById('dropZone'),fi=document.getElementById('fileInput'),fsb=document.getElementById('fileSelectBtn');fsb.addEventListener('click',()=>fi.click());fi.addEventListener('change',()=>{if(fi.files.length>0){addFiles(Array.from(fi.files));fi.value='';}});dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('active');});dz.addEventListener('dragleave',()=>dz.classList.remove('active'));dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('active');const fs=Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('video/')||isValidVideoFile(f));if(fs.length>0)addFiles(fs);});document.addEventListener('paste',e=>{const fs=Array.from(e.clipboardData.items).filter(i=>i.kind==='file').map(i=>i.getAsFile()).filter(f=>f?.type.startsWith('video/'));if(fs.length>0)addFiles(fs);});}
 
-// =============================================
-// ERROR HANDLING
-// =============================================
+// ============================================= INIT =============================================
 window.addEventListener('error',e=>{console.error(e.error);});
 window.addEventListener('unhandledrejection',e=>{console.error(e.reason);});
 window.addEventListener('beforeunload',e=>{if(appState.queue.some(t=>t.status==='processing')){e.preventDefault();e.returnValue=t('leaving');return e.returnValue;}});
-
-// =============================================
-// INIT
-// =============================================
-async function init(){
-  compatibilityResult=await checkCompat();updateBrowserStatus(compatibilityResult);showCompatBanner(compatibilityResult);
-  if(!compatibilityResult.supported){document.getElementById('dropZone').style.opacity='0.5';document.getElementById('dropZone').style.pointerEvents='none';return;}
-  setupDragDrop();
-  document.getElementById('langToggle').addEventListener('click',()=>setLang(LANG==='zh'?'en':'zh'));
-  document.getElementById('startAllBtn').addEventListener('click',startAllCompression);
-  document.getElementById('clearQueueBtn').addEventListener('click',()=>{appState.queue=appState.queue.filter(t=>t.status!=='completed'&&t.status!=='failed');if(!appState.queue.find(t=>t.id===appState.selectedId))appState.selectedId=appState.queue[0]?.id||null;renderQueue();updateMainContent();});
-  document.getElementById('closeCompare').addEventListener('click',closeCompare);
-  document.querySelector('.modal__backdrop')?.addEventListener('click',closeCompare);
-  refreshI18n();
-  log('Ready | '+compatibilityResult.codecs.filter(c=>c.hardwareAccelerated).length+' GPU encoders available');
-}
-document.addEventListener('DOMContentLoaded',init);
+async function init(){compatibilityResult=await checkCompat();updateBrowserStatus(compatibilityResult);showCompatBanner(compatibilityResult);if(!compatibilityResult.supported){document.getElementById('dropZone').style.opacity='0.5';document.getElementById('dropZone').style.pointerEvents='none';return;}setupDragDrop();document.getElementById('langToggle').addEventListener('click',()=>setLang(LANG==='zh'?'en':'zh'));document.getElementById('startAllBtn').addEventListener('click',startAllCompression);document.getElementById('clearQueueBtn').addEventListener('click',()=>{appState.queue=appState.queue.filter(t=>t.status!=='completed'&&t.status!=='failed');if(!appState.queue.find(t=>t.id===appState.selectedId))appState.selectedId=appState.queue[0]?.id||null;renderQueue();updateMainContent();});document.getElementById('closeCompare').addEventListener('click',closeCompare);document.querySelector('.modal__backdrop')?.addEventListener('click',closeCompare);refreshI18n();log(t('ready')+' | '+(compatibilityResult.codecs.filter(c=>c.hardwareAccelerated).length)+' '+t('gpuEnc'));}document.addEventListener('DOMContentLoaded',init);
 </script>
 </body>
 </html>
