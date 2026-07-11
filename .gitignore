@@ -4,3 +4,8 @@ node_modules/
 .claude/
 uploads/
 outputs/
+bin/ffmpeg.exe
+bin/ffprobe.exe
+bin/ffmpeg
+bin/ffprobe
+!bin/README.txt

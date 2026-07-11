@@ -6,6 +6,34 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 
+// ---- FFmpeg path resolution ----
+// Priority: env var > ./bin/ > system PATH
+const BIN_DIR = path.join(__dirname, 'bin');
+const FFMPEG_ENV = process.env.FFMPEG_PATH;
+const FFPROBE_ENV = process.env.FFPROBE_PATH;
+
+function findExe(name) {
+  const candidates = [];
+  if (FFMPEG_ENV && name === 'ffmpeg') candidates.push(FFMPEG_ENV);
+  if (FFPROBE_ENV && name === 'ffprobe') candidates.push(FFPROBE_ENV);
+  candidates.push(
+    path.join(BIN_DIR, name + '.exe'),
+    path.join(BIN_DIR, name),
+    name + '.exe',
+    name,
+  );
+  for (const p of candidates) {
+    if (p && fs.existsSync(p)) return p;
+  }
+  return null;
+}
+
+const ffmpegPath = findExe('ffmpeg');
+const ffprobePath = findExe('ffprobe');
+
+if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
+if (ffprobePath) ffmpeg.setFfprobePath(ffprobePath);
+
 const app = express();
 const PORT = 3000;
 
@@ -240,12 +268,16 @@ app.delete('/api/file/:id', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🎬 VideoCompress server running at http://localhost:${PORT}`);
-  console.log('   Upload API: POST /api/upload');
-  console.log('   Info API:   GET  /api/info/:id');
-  console.log('   Compress:   POST /api/compress/:id');
-  console.log('   Progress:   GET  /api/progress/:id (SSE)');
-  console.log('   Download:   GET  /api/download/:id');
+  console.log('🎬 VideoCompress server running at http://localhost:' + PORT);
+  console.log('   FFmpeg :', ffmpegPath || '(system PATH)');
+  console.log('   FFprobe:', ffprobePath || '(system PATH)');
+  if (!ffmpegPath && !ffprobePath) {
+    console.log('   💡 Put ffmpeg.exe + ffprobe.exe in ./bin/');
+  }
   console.log('');
-  console.log('   Make sure FFmpeg is installed: ffmpeg -version');
+  console.log('   Upload:   POST /api/upload');
+  console.log('   Info:     GET  /api/info/:id');
+  console.log('   Compress: POST /api/compress/:id');
+  console.log('   Progress: GET  /api/progress/:id (SSE)');
+  console.log('   Download: GET  /api/download/:id');
 });
