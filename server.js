@@ -41,14 +41,17 @@ const PORT = 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Ensure directories exist
-['uploads', 'outputs'].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d); });
+['uploads', 'outputs'].forEach(d => {
+  const p = path.join(__dirname, d);
+  if (!fs.existsSync(p)) fs.mkdirSync(p);
+});
 
 // File upload setup
 const storage = multer.diskStorage({
-  destination: 'uploads/',
+  destination: path.join(__dirname, 'uploads/'),
   filename: (req, file, cb) => cb(null, uuidv4() + path.extname(file.originalname)),
 });
 const upload = multer({
@@ -131,7 +134,7 @@ app.post('/api/compress/:id', (req, res) => {
   job.options = opts;
   job.status = 'processing';
   job.progress = 0;
-  job.outputPath = path.join('outputs', job.id + '_compressed.mp4');
+  job.outputPath = path.join(__dirname, 'outputs', job.id + '_compressed.mp4');
 
   // Build FFmpeg command
   const cmd = ffmpeg(job.inputPath);
