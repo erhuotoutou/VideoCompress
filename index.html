@@ -436,20 +436,69 @@ class CompressionEngine {
     video.pause();video.src='';
     log('Captured: '+capturedCount+' frames');
   }
-  // Encode a single frame (lazy-init encoder)
+  // Encode a single frame (lazy-init encoder with HW→SW fallback)
   async _encodeFrame(frame){
     if(!this.videoEncoder){
       const codec = pickCodecForResolution(this.options.codec, this.options.width, this.options.height);
-      const encoder=new VideoEncoder({
-        output:(chunk)=>{const d=new Uint8Array(chunk.byteLength);chunk.copyTo(d);this.encodedVideoChunks.push({data:d,byteLength:chunk.byteLength,timestamp:chunk.timestamp,duration:chunk.duration,type:chunk.type});},
-        error:(err)=>{console.error(err);log('Encode error: '+err.message,true);this._reject?.(new Error('Encode error: '+err.message));},
-      });
-      this.videoEncoder=encoder;
-      await encoder.configure({codec,width:this.options.width,height:this.options.height,bitrate:this.options.videoBitrate,framerate:this.options.fps,hardwareAcceleration:'prefer-hardware',...(this.options.bitrateMode==='cbr'?{latencyMode:'realtime'}:{})});
-      this.options._actualCodec = codec;
-      log('Encoder: '+codec+' '+this.options.width+'x'+this.options.height+' @ '+formatBitrate(this.options.videoBitrate));
+      const cfg = {codec,width:this.options.width,height:this.options.height,bitrate:this.options.videoBitrate,framerate:this.options.fps,...(this.options.bitrateMode==='cbr'?{latencyMode:'realtime'}:{})};
+
+      // Try hardware first, fall back to software
+      let useHW = true;
+      try {
+        const hwOk = await VideoEncoder.isConfigSupported({...cfg, hardwareAcceleration:'prefer-hardware'});
+        useHW = hwOk.supported === true;
+      } catch { useHW = false; }
+
+      const makeEncoder = (hw) => {
+        return new VideoEncoder({
+          output:(chunk)=>{const d=new Uint8Array(chunk.byteLength);chunk.copyTo(d);this.encodedVideoChunks.push({data:d,byteLength:chunk.byteLength,timestamp:chunk.timestamp,duration:chunk.duration,type:chunk.type});},
+          error:(err)=>{
+            console.error(err);
+            if (!this._encoderRetried) {
+              // Hardware encoder crashed — recreate with software
+              this._encoderRetried = true;
+              log('GPU encoder crashed, retrying with CPU...');
+              try { this.videoEncoder.close(); } catch {}
+              this.videoEncoder = null;
+              this._initEncoder(codec, cfg, false).then(() => {
+                // Re-encode current frame
+                try { const f2 = new VideoFrame(this.canvas, {timestamp:frame.timestamp,duration:frame.duration}); this._encodeFrame(f2); f2.close(); } catch {}
+              }).catch(e => { log('CPU fallback failed: '+e.message, true); this._reject?.(new Error('Encode error: '+e.message)); });
+            } else {
+              log('Encode error: '+err.message, true);
+              this._reject?.(new Error('Encode error: '+err.message));
+            }
+          },
+        });
+      };
+
+      await this._initEncoder(codec, cfg, useHW);
     }
     try{this.videoEncoder.encode(frame);}catch(e){/* skip */}
+  }
+
+  async _initEncoder(codec, cfg, useHW) {
+    const encoder = new VideoEncoder({
+      output:(chunk)=>{const d=new Uint8Array(chunk.byteLength);chunk.copyTo(d);this.encodedVideoChunks.push({data:d,byteLength:chunk.byteLength,timestamp:chunk.timestamp,duration:chunk.duration,type:chunk.type});},
+      error:(err)=>{
+        console.error(err);
+        if (!this._encoderRetried) {
+          this._encoderRetried = true;
+          log('GPU encoder crashed, retrying with CPU...');
+          try { this.videoEncoder.close(); } catch {}
+          this.videoEncoder = null;
+          this._initEncoder(codec, cfg, false).catch(e => { log('CPU fallback failed: '+e.message, true); this._reject?.(new Error('Encode error: '+e.message)); });
+        } else {
+          log('Encode error: '+err.message, true);
+          this._reject?.(new Error('Encode error: '+err.message));
+        }
+      },
+    });
+    this.videoEncoder = encoder;
+    const accel = useHW ? 'prefer-hardware' : 'prefer-software';
+    await encoder.configure({...cfg, hardwareAcceleration: accel});
+    this.options._actualCodec = codec;
+    log('Encoder: '+codec+' '+(useHW?'GPU':'CPU')+' '+this.options.width+'x'+this.options.height+' @ '+formatBitrate(this.options.videoBitrate));
   }
   // Audio extraction
   async _extractAndEncodeAudio(url){
