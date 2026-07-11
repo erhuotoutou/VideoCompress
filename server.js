@@ -246,23 +246,25 @@ app.post('/api/compress/:id', (req, res) => {
     cmd.outputOptions(['-nal-hrd cbr']);
   }
 
-  // Common options
-  cmd.outputOptions([
-    '-movflags', '+faststart',  // Web-optimized
-    '-preset', 'fast',          // Balance speed vs quality
-    '-pix_fmt', 'yuv420p',     // Wide compatibility
-  ]);
+  // Minimal safe options — avoid encoder-specific params that may cause EINVAL
+  cmd.outputOptions(['-pix_fmt', 'yuv420p']);
+  // faststart only for mp4-compatible outputs
+  cmd.outputOptions(['-movflags', '+faststart']);
 
-  // GPU acceleration: try HW encoder based on available hardware
-  // NVIDIA NVENC
-  const gpuCodec = codec.includes('265') || codec.includes('hevc') ? 'hevc_nvenc' : 'h264_nvenc';
-  // We'll check by trying; ffmpeg will error if not available
+  // Software encoders: add preset for speed
+  if (codec.startsWith('libx') || codec.startsWith('libopenh') || codec.startsWith('libvpx')) {
+    cmd.outputOptions(['-preset', 'fast']);
+  }
 
   // Ensure output dir exists
   const outDir = path.dirname(job.outputPath);
   if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
 
   cmd.output(job.outputPath);
+
+  // Log the command for debugging
+  const cmdArgs = cmd._getArguments();
+  console.log('FFmpeg command:', ffmpegPath || 'ffmpeg', cmdArgs.join(' '));
 
   // Track progress
   let lastProgress = 0;
