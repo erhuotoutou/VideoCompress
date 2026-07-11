@@ -2,13 +2,13 @@
 
 > [📖 English Docs](README.en.md) | [🏠 Home](README.md)
 
-纯浏览器的视频压缩工具，调用 GPU 硬件编码，无需上传任何数据。
+基于 Node.js + FFmpeg 的本地视频压缩工具，支持 NVIDIA / AMD / Intel GPU 硬件编码。网页端操作，服务端处理，无需上传任何数据。
 
 ## 功能
 
 | 功能 | 说明 |
 |------|------|
-| 🚀 **GPU 加速** | WebCodecs API → NVENC / AMF / QSV 硬件编码 |
+| 🚀 **GPU 加速** | NVIDIA NVENC / AMD AMF / Intel QSV 硬件编码 |
 | 📐 **分辨率** | 预设 (4K / 2K / 1080p / 720p / 480p) + 自定义宽高 |
 | 📊 **码率控制** | 500 Kbps ~ 50 Mbps，VBR / CBR 模式 |
 | 🎞️ **帧率** | 保持原始 / 60 / 30 / 24 / 15 fps |
@@ -16,15 +16,18 @@
 | 🔮 **预估大小** | 实时计算 ±5% 范围，显示节省百分比 |
 | 📦 **批量处理** | 多文件队列，独立参数，顺序处理 |
 | 👁️ **预览对比** | 并排 + 滑块对比，压缩前后大小统计 |
+| 🌐 **中英双语** | 页面右上角一键切换 |
 
 ## 浏览器要求
 
-| 浏览器 | 支持 |
-|--------|------|
-| Chrome 94+ | ✅ 完整 GPU 加速 |
-| Edge 94+ | ✅ 完整 GPU 加速 |
-| Firefox | ⚠️ WebCodecs 支持不完整 |
-| Safari | ⚠️ WebCodecs 支持不完整 |
+任意现代浏览器均可使用（Chrome / Edge / Firefox / Safari）。
+
+## 环境要求
+
+| 组件 | 要求 |
+|------|------|
+| Node.js | 18+ |
+| FFmpeg | 4.0+（支持便携模式，见下方） |
 
 ## 快速开始
 
@@ -33,47 +36,102 @@
 ```bash
 git clone git@github.com:erhuotoutou/VideoCompress.git
 cd VideoCompress
+npm install
 ```
 
-### 2. 启动本地服务器
+### 2. 配置 FFmpeg（三选一）
 
-必须通过 HTTP 服务器访问（`file://` 协议下 WebCodecs 不可用）：
+**方式 A：便携模式（推荐，无需安装）**
+
+从 [ffmpeg.org/download](https://ffmpeg.org/download.html) 下载 Windows 版本，解压后将以下文件放入项目的 `bin/` 目录：
+
+```
+bin/
+├── ffmpeg.exe
+├── ffprobe.exe
+└── README.txt
+```
+
+**方式 B：环境变量**
 
 ```bash
-# 方式 A: Python (推荐)
-python -m http.server 3000
+# Windows
+set FFMPEG_PATH=C:\tools\ffmpeg.exe
+set FFPROBE_PATH=C:\tools\ffprobe.exe
 
-# 方式 B: Node.js
-npx serve . -p 3000 --no-clipboard
+# Linux / macOS
+export FFMPEG_PATH=/opt/ffmpeg/ffmpeg
+export FFPROBE_PATH=/opt/ffmpeg/ffprobe
 ```
 
-### 3. 打开浏览器
+**方式 C：系统安装**
+
+```bash
+# Windows: choco install ffmpeg 或 winget install ffmpeg
+# macOS:   brew install ffmpeg
+# Linux:   apt install ffmpeg / dnf install ffmpeg
+```
+
+### 3. 启动服务器
+
+```bash
+node server.js
+```
+
+启动日志会显示当前使用的 FFmpeg 路径：
+
+```
+FFmpeg : C:\...\bin\ffmpeg.exe
+FFprobe: C:\...\bin\ffprobe.exe
+```
+
+### 4. 打开浏览器
 
 ```
 http://localhost:3000
 ```
 
-### 4. 使用
+页面右上角显示「服务器 ✅」表示连接正常。
 
-1. **拖入视频** → 拖拽区支持 MP4 / WebM / MKV / MOV（也支持点击选择或 Ctrl+V 粘贴）
-2. **设置参数** → 分辨率、编码器、码率、帧率、音频
-3. **点击开始** → 左下角日志面板显示实时进度
-4. **下载 / 对比** → 完成后下载压缩视频，或打开对比窗口查看画质差异
+### 5. 使用
+
+1. **拖入视频** → 支持 MP4 / WebM / MKV / MOV（也可点击选择或 Ctrl+V 粘贴）
+2. **等待分析** → 服务器通过 ffprobe 获取视频元数据
+3. **设置参数** → 分辨率、编码器、码率、帧率、音频
+4. **点击开始** → 左下角日志面板显示实时进度
+5. **下载 / 对比** → 完成后下载压缩视频，或打开对比窗口
 
 > 每个文件可独立设置参数，使用「应用到全部」按钮批量同步。
 
-## 工作原理
+## 架构
 
 ```
-文件 → <video>元素解码 → Canvas(缩放/帧率)
-     → VideoEncoder(GPU编码) → mp4box.js(封装) → .mp4 下载
+浏览器 (public/index.html)
+    │  POST /api/upload       ← 上传文件
+    │  GET  /api/info/:id     ← ffprobe 获取元数据
+    │  POST /api/compress/:id ← 启动 FFmpeg
+    │  GET  /api/progress/:id ← SSE 实时进度
+    │  GET  /api/download/:id ← 下载结果
+    ▼
+server.js (Express + fluent-ffmpeg)
+    │
+    ▼
+FFmpeg (ffmpeg + ffprobe)
 ```
 
-- **解码**: 浏览器原生 `<video>` 元素解码，兼容所有播放格式
-- **帧处理**: Canvas 完成分辨率和帧率的调整
-- **编码**: WebCodecs API 直接调用系统的 GPU 硬件编码器
-- **封装**: mp4box.js 生成 MP4 容器
-- **全本地**: 所有处理在浏览器内完成，视频数据不会离开你的电脑
+## 支持的编码器
+
+| 编码器 | 类型 | 说明 |
+|--------|------|------|
+| libx264 | 软件 | H.264，最通用 |
+| **h264_nvenc** | NVIDIA GPU | H.264 硬件编码 |
+| h264_amf | AMD GPU | H.264 硬件编码 |
+| h264_qsv | Intel GPU | H.264 硬件编码 |
+| libx265 | 软件 | H.265，更高压缩比 |
+| **hevc_nvenc** | NVIDIA GPU | H.265 硬件编码 |
+| libvpx-vp9 | 软件 | VP9，WebM 容器 |
+
+> GPU 编码器需要对应的显卡和驱动支持。以 `_nvenc` 结尾的需要 NVIDIA 显卡，`_amf` 需要 AMD 显卡，`_qsv` 需要 Intel 核显。
 
 ## 预估大小公式
 
@@ -88,48 +146,35 @@ http://localhost:3000
 
 ```
 VideoCompress/
-├── index.html          # 主页面，内嵌全部 CSS/JS
-├── mp4box.all.js       # mp4box.js 容器处理库 (纯 JS)
-├── README.md           # 首页 (语言选择)
-├── README.zh.md        # 中文文档 (本文件)
-├── README.en.md        # 英文文档
-└── docs/
-    ├── specs/          # 设计文档
-    └── plans/          # 实现计划
+├── server.js           # Express 服务端
+├── public/
+│   └── index.html      # 前端页面
+├── bin/                # FFmpeg 可执行文件（便携模式）
+│   ├── ffmpeg.exe      # gitignored
+│   ├── ffprobe.exe     # gitignored
+│   └── README.txt
+├── uploads/            # 临时上传（gitignored）
+├── outputs/            # 压缩输出（gitignored）
+└── README.md
 ```
-
-## 支持的编码器
-
-| 编码器 | 输出 | GPU 加速 |
-|--------|------|----------|
-| H.264 (Baseline / Main / High) | ✅ | ✅ 普遍可用 |
-| H.265 / HEVC | ✅ | ⚠️ 需显卡 / 驱动支持 |
-| VP9 | ✅ | ✅ Chrome 内置 |
-| AV1 | ✅ | ⚠️ 需较新硬件 |
-
-编码器可用性在页面加载时自动检测，不支持的会灰掉。
 
 ## 常见问题
 
-**Q: 为什么需要本地 HTTP 服务器？**
+**Q: 如何确认 GPU 加速是否生效？**
 
-A: `file://` 协议下浏览器禁止使用某些 API。用 `python -m http.server` 一行命令即可。
+A: 选择带 `NVENC` / `AMF` / `QSV` 的编码器（如 `h264_nvenc`），压缩时观察编码速度。GPU 编码通常能达到 5-20x 实时速度，CPU 编码通常只有 1-3x。
 
-**Q: Firefox / Safari 能用吗？**
+**Q: FFmpeg 下载哪个版本？**
 
-A: 当前 Firefox 和 Safari 的 WebCodecs 支持不完整，推荐使用 Chrome 或 Edge。
+A: Windows 用户从 [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) 下载 `ffmpeg-release-essentials.zip`，解压后把 `bin/` 里的 `ffmpeg.exe` 和 `ffprobe.exe` 拷贝到项目的 `bin/` 目录。
 
-**Q: 为什么 H.265 是灰的？**
+**Q: 能同时处理多个文件吗？**
 
-A: H.265 硬件编码需要显卡和驱动支持。多数 N 卡（GTX 10 系+）和 Intel 核显（6 代+）支持。
+A: 可以。拖入多个文件加入队列，设置参数后点击「全部开始」。队列按顺序逐个处理。
 
-**Q: 压缩速度有多快？**
+**Q: 文件存在哪里？安全吗？**
 
-A: GPU 硬编码通常能达到 2-5x 实时速度。具体取决于分辨率、码率和硬件。
-
-**Q: 为什么有些 MP4 文件无法压缩？**
-
-A: 相机直出的 MP4 文件编码格式可能特殊。项目已使用浏览器原生解码器处理帧提取，浏览器能播放的视频理论上都能压缩。如仍有问题请提 Issue。
+A: 上传的文件和压缩结果只存在本地服务器的 `uploads/` 和 `outputs/` 目录，不会上传到任何外部服务器。服务器只在 `localhost` 监听。
 
 ## License
 

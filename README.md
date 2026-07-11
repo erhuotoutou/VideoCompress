@@ -2,29 +2,36 @@
 
 **本地 GPU 加速视频压缩工具** | **Local GPU-Accelerated Video Compressor**
 
+> Node.js + FFmpeg 架构，支持 NVIDIA / AMD / Intel GPU 硬件编码
+
 [📖 中文文档](README.zh.md) | [📖 English Docs](README.en.md)
 
 ---
-
-纯浏览器的视频压缩工具，调用 GPU 硬件编码，无需上传任何数据。
-
-A pure browser-based video compression tool using GPU hardware encoding. No data is ever uploaded.
 
 ## 快速开始 / Quick Start
 
 ```bash
 git clone git@github.com:erhuotoutou/VideoCompress.git
 cd VideoCompress
-python -m http.server 3000
-# 打开 / Open → http://localhost:3000
+npm install
+
+# 方式 A: 便携模式（推荐）
+#   从 https://ffmpeg.org/download.html 下载 ffmpeg.exe + ffprobe.exe
+#   放入 bin/ 目录，无需安装
+
+# 方式 B: 系统安装
+#   确保 ffmpeg -version 可用
+
+node server.js
+# → http://localhost:3000
 ```
 
-> 要求 Chrome 94+ / Edge 94+ | Requires Chrome 94+ / Edge 94+
+> 要求 Node.js 18+ | FFmpeg 4.0+
 
 选择语言查看完整文档 / Choose language for full docs:
 
-- [中文文档 (README.zh.md)](README.zh.md) — 功能说明、使用指南、FAQ
-- [English Docs (README.en.md)](README.en.md) — Features, usage guide, FAQ
+- [中文文档 (README.zh.md)](README.zh.md)
+- [English Docs (README.en.md)](README.en.md)
 
 ## License
 
