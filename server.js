@@ -253,18 +253,13 @@ app.post('/api/compress/:id', (req, res) => {
     args.push('-preset', 'fast');
   }
 
-  // Explicit overwrite
-  args.push('-y', job.outputPath);
-
-  // Apply all args at once
+  // Apply all args at once (fluent-ffmpeg handles -y and output path via .output())
   cmd.outputOptions(args);
 
   // Ensure output dir exists
   const outDir = path.dirname(job.outputPath);
   if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
 
-  // Force overwrite and use forward slashes for ffmpeg compatibility
-  cmd.outputOptions(['-y']);
   cmd.output(job.outputPath);
 
   // Log the command
