@@ -39,37 +39,20 @@ cd VideoCompress
 npm install
 ```
 
-### 2. Configure FFmpeg (pick one)
-
-**Option A: Portable mode (recommended, no install needed)**
-
-Download from [ffmpeg.org/download](https://ffmpeg.org/download.html), extract, and place the following files in the `bin/` directory:
-
-```
-bin/
-├── ffmpeg.exe       # (or ffmpeg on Linux/macOS)
-├── ffprobe.exe      # (or ffprobe on Linux/macOS)
-└── README.txt
-```
-
-**Option B: Environment variables**
+### 2. Install FFmpeg (one-command setup)
 
 ```bash
-# Windows
-set FFMPEG_PATH=C:\tools\ffmpeg.exe
-set FFPROBE_PATH=C:\tools\ffprobe.exe
-
-# Linux / macOS
-export FFMPEG_PATH=/opt/ffmpeg/ffmpeg
-export FFPROBE_PATH=/opt/ffmpeg/ffprobe
+node setup.js
 ```
 
-**Option C: System install**
+Automatically downloads FFmpeg to `bin/` directory (~100MB, first time only).
+
+Or configure manually:
 
 ```bash
-# Windows: choco install ffmpeg  or  winget install ffmpeg
-# macOS:   brew install ffmpeg
-# Linux:   apt install ffmpeg  /  dnf install ffmpeg
+# Download from https://ffmpeg.org/download.html and place in bin/
+# Or set FFMPEG_PATH / FFPROBE_PATH environment variables
+# Or ensure system has ffmpeg installed: ffmpeg -version
 ```
 
 ### 3. Start Server

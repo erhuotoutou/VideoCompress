@@ -39,37 +39,20 @@ cd VideoCompress
 npm install
 ```
 
-### 2. 配置 FFmpeg（三选一）
-
-**方式 A：便携模式（推荐，无需安装）**
-
-从 [ffmpeg.org/download](https://ffmpeg.org/download.html) 下载 Windows 版本，解压后将以下文件放入项目的 `bin/` 目录：
-
-```
-bin/
-├── ffmpeg.exe
-├── ffprobe.exe
-└── README.txt
-```
-
-**方式 B：环境变量**
+### 2. 安装 FFmpeg（一键脚本）
 
 ```bash
-# Windows
-set FFMPEG_PATH=C:\tools\ffmpeg.exe
-set FFPROBE_PATH=C:\tools\ffprobe.exe
-
-# Linux / macOS
-export FFMPEG_PATH=/opt/ffmpeg/ffmpeg
-export FFPROBE_PATH=/opt/ffmpeg/ffprobe
+node setup.js
 ```
 
-**方式 C：系统安装**
+自动从网络下载 FFmpeg 到 `bin/` 目录（约 100MB，仅首次需要）。
+
+也可以手动配置：
 
 ```bash
-# Windows: choco install ffmpeg 或 winget install ffmpeg
-# macOS:   brew install ffmpeg
-# Linux:   apt install ffmpeg / dnf install ffmpeg
+# 或从 https://ffmpeg.org/download.html 下载后放入 bin/
+# 或设置环境变量 FFMPEG_PATH / FFPROBE_PATH
+# 或确保系统已安装: ffmpeg -version
 ```
 
 ### 3. 启动服务器

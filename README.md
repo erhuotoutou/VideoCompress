@@ -14,16 +14,8 @@
 git clone git@github.com:erhuotoutou/VideoCompress.git
 cd VideoCompress
 npm install
-
-# 方式 A: 便携模式（推荐）
-#   从 https://ffmpeg.org/download.html 下载 ffmpeg.exe + ffprobe.exe
-#   放入 bin/ 目录，无需安装
-
-# 方式 B: 系统安装
-#   确保 ffmpeg -version 可用
-
-node server.js
-# → http://localhost:3000
+node setup.js    # 自动下载 FFmpeg（一次性，~100MB）
+node server.js   # → http://localhost:3000
 ```
 
 > 要求 Node.js 18+ | FFmpeg 4.0+
