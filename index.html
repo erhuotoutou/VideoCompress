@@ -703,17 +703,54 @@ class CompressionEngine {
     this.videoDecoder = decoder;
 
     // Configure decoder - wait for it to be ready
+    let codec = this.originalInfo.codec;
+
+    // Ensure description is a valid ArrayBuffer/ArrayBufferView for WebCodecs
+    let safeDesc = null;
+    if (description) {
+      if (description instanceof ArrayBuffer || ArrayBuffer.isView(description)) {
+        safeDesc = description;
+      } else if (description.buffer instanceof ArrayBuffer) {
+        // e.g., mp4box returns a DataView-like object with .buffer
+        safeDesc = description.buffer;
+      } else if (typeof description === 'object' && description.data) {
+        // mp4box sometimes wraps in { data: ArrayBuffer }
+        const d = description.data;
+        if (d instanceof ArrayBuffer || ArrayBuffer.isView(d)) safeDesc = d;
+        else if (d?.buffer instanceof ArrayBuffer) safeDesc = d.buffer;
+      }
+      // If still not valid, try wrapping in Uint8Array as last resort
+      if (!safeDesc && (description instanceof Array || typeof description === 'object')) {
+        try { safeDesc = new Uint8Array(Object.values(description)).buffer; } catch {}
+      }
+    }
+
+    // If codec is just a FOURCC (e.g., 'avc1'), try to construct a full codec string
+    if (codec && !codec.includes('.') && safeDesc) {
+      try {
+        const dv = new DataView(safeDesc instanceof ArrayBuffer ? safeDesc : safeDesc.buffer);
+        if (codec.startsWith('avc') && dv.byteLength >= 4) {
+          const profile = dv.getUint8(1).toString(16).padStart(2, '0');
+          const compat = dv.getUint8(2).toString(16).padStart(2, '0');
+          const level = dv.getUint8(3).toString(16).padStart(2, '0');
+          codec = 'avc1.' + profile + compat + level;
+          log('构建解码器codec: ' + codec);
+        } else if (codec.startsWith('hvc') && dv.byteLength >= 4) {
+          // Simplified H.265 codec string construction
+          const profile = dv.getUint8(1);
+          const level = dv.getUint8(3);
+          codec = 'hvc1.' + profile + '.0.L' + level + '.0';
+          log('构建解码器codec: ' + codec);
+        }
+      } catch { /* keep original codec */ }
+    }
+
     await new Promise((resolve, reject) => {
       try {
-        const codec = this.originalInfo.codec;
-        // For mp4box, the 'codec' property might be just the FOURCC (e.g., 'avc1').
-        // WebCodecs needs full codec string. If we have description data,
-        // we can use a generic codec + description, which Chrome handles.
         const config = { codec: codec };
-        if (description) config.description = description;
-
+        if (safeDesc) config.description = safeDesc;
+        log('解码器配置: codec=' + codec + ', desc=' + (safeDesc ? safeDesc.byteLength + 'B' : '无'));
         decoder.configure(config);
-        // configure() is synchronous - if it throws, we catch it
         configDone = true;
         resolve();
       } catch (e) {
